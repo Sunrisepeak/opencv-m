@@ -75,13 +75,21 @@ export-list diffs.
   other (gcc 16 merges textual+imported global-module entities with
   `conflicting default argument` errors otherwise). `import opencv.cv;` is the
   supported entry; importing a single module gives that module's names only.
-- Mixing textual `#include <opencv2/…>` with imports in one consumer TU is
-  supported for the macros side header (include BEFORE import); broader
-  header/import mixing is at-your-own-risk territory across the ecosystem.
+- **Mixed TUs** (textual `#include <opencv2/…>` BEFORE the import): fully
+  supported since v0.0.3 for the whole operator surface — the replacement
+  operators are constrained templates that resolve deterministically in
+  both pure-import and mixed TUs (see `src/core_ops.inc` header comment).
+  One compiler-side limit remains: `<opencv2/core.hpp>` itself cannot be
+  textually mixed with the import on gcc 16 (its default-argument
+  redeclarations trip `conflicting default argument` during global-module
+  merge — include `types.hpp`/`mat.hpp`-level headers instead, or use the
+  macros side header).
 - The export surface = hdr_parser (python-wrapper annotations) + curated
-  whitelists, compile-verified; internal-linkage inline helpers
-  (`cv::saturate_cast`, `cv::abs`, …) cannot be re-exported by a module —
-  they remain reachable via the macros side header. See
-  `src/gen_exports/*.skipped.txt`.
+  whitelists, compile-verified. Upstream's internal-linkage operator/helper
+  surface cannot cross the module boundary, so it is REPLACED:
+  `src/core_ops.inc` (saturate_cast, Point/Size/Rect/Range/Scalar/Complex,
+  Mat/MatExpr delegation) + `src/matx_ops.inc` (v0.0.3: the full Matx/Vec
+  algebra — 50 operators incl. matrix multiply, determinant/trace/norm).
+  See `src/gen_exports/*.skipped.txt` for the rest.
 - License: this wrapper repo is MIT; upstream OpenCV arrives via
   `compat.opencv5` under **Apache-2.0**.

@@ -16,6 +16,7 @@ module;
 export module opencv.core;
 
 #include "gen_exports/core.inc"
+#include "core_ops.inc"
 
 // ── constant macros re-homed as cv:: constexpr (original spellings) ──────
 // CV_8U / CV_8UC3 / CV_PI … are object-like macros upstream; a module cannot

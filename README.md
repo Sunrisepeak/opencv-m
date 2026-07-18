@@ -36,7 +36,7 @@ int main() {
 
 ```toml
 [dependencies]
-opencv = "0.0.1"
+opencv = "0.0.2"
 ```
 
 Or start from the template: `mcpp new myvision --template imgproc`.

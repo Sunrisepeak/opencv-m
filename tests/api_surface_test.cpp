@@ -31,6 +31,22 @@ TEST(ApiSurface, ImgprocEnumsAndOps) {
     EXPECT_EQ(gray.channels(), 1);
 }
 
+TEST(ApiSurface, ReplacementValueOps) {
+    // upstream declares these operators `static inline` (TU-local) — the
+    // module ships self-contained replacements (src/core_ops.inc)
+    EXPECT_TRUE(cv::Size(2, 3) != cv::Size(3, 2));
+    EXPECT_TRUE(cv::Size(2, 3) == cv::Size(2, 3));
+    EXPECT_EQ(cv::Point(1, 2) + cv::Point(3, 4), cv::Point(4, 6));
+    EXPECT_EQ(cv::Point2f(1.f, 2.f) * 2.f, cv::Point2f(2.f, 4.f));
+    EXPECT_EQ(cv::Rect(0, 0, 4, 4) & cv::Rect(2, 2, 4, 4), cv::Rect(2, 2, 2, 2));
+    EXPECT_EQ(cv::Rect(0, 0, 2, 2) | cv::Rect(2, 2, 2, 2), cv::Rect(0, 0, 4, 4));
+    EXPECT_TRUE(cv::Range(1, 5) == cv::Range(1, 5));
+    EXPECT_EQ((cv::Range(1, 5) & cv::Range(3, 9)), cv::Range(3, 5));
+    EXPECT_EQ(cv::saturate_cast<unsigned char>(300), 255);
+    EXPECT_EQ(cv::saturate_cast<unsigned char>(-5), 0);
+    EXPECT_EQ(cv::saturate_cast<short>(1e9f), 32767);
+}
+
 TEST(ApiSurface, VideoioRegistry) {
     EXPECT_FALSE(cv::videoio_registry::getBackends().empty());
 }

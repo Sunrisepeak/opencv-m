@@ -50,3 +50,61 @@ TEST(ApiSurface, ReplacementValueOps) {
 TEST(ApiSurface, VideoioRegistry) {
     EXPECT_FALSE(cv::videoio_registry::getBackends().empty());
 }
+
+TEST(MatxOps, Algebra) {
+    // R1 replacement surface: Matx/Vec namespace-scope operators.
+    cv::Matx33f a(1, 2, 3, 4, 5, 6, 7, 8, 9);
+    cv::Matx33f b = a + a;
+    EXPECT_FLOAT_EQ(b(1, 1), 10.0f);
+    cv::Matx33f c = b - a;
+    EXPECT_FLOAT_EQ(c(2, 0), 7.0f);
+    EXPECT_TRUE(c == a);
+    EXPECT_FALSE(c != a);
+
+    cv::Matx33f s = a * 2.0f;
+    EXPECT_FLOAT_EQ(s(0, 2), 6.0f);
+    cv::Matx33f neg = -a;
+    EXPECT_FLOAT_EQ(neg(0, 0), -1.0f);
+
+    // real matrix multiply
+    cv::Matx22f m1(1, 2, 3, 4), m2(5, 6, 7, 8);
+    cv::Matx22f mm = m1 * m2;
+    EXPECT_FLOAT_EQ(mm(0, 0), 19.0f);
+    EXPECT_FLOAT_EQ(mm(1, 1), 50.0f);
+
+    // Matx * Vec -> Vec
+    cv::Vec2f v(1, 1);
+    cv::Vec2f mv = m1 * v;
+    EXPECT_FLOAT_EQ(mv[0], 3.0f);
+    EXPECT_FLOAT_EQ(mv[1], 7.0f);
+
+    EXPECT_DOUBLE_EQ(cv::determinant(cv::Matx22d(3, 0, 0, 2)), 6.0);
+    EXPECT_DOUBLE_EQ(cv::trace(m1), 5.0);
+    EXPECT_NEAR(cv::norm(cv::Matx21f(3, 4)), 5.0, 1e-6);
+}
+
+TEST(MatxOps, VecAlgebra) {
+    cv::Vec3f u(1, 2, 3), w(4, 5, 6);
+    cv::Vec3f sum = u + w;
+    EXPECT_FLOAT_EQ(sum[2], 9.0f);
+    cv::Vec3f dif = w - u;
+    EXPECT_FLOAT_EQ(dif[0], 3.0f);
+    cv::Vec3f sc = u * 2.0f;
+    EXPECT_FLOAT_EQ(sc[1], 4.0f);
+    cv::Vec3f dv = w / 2.0f;
+    EXPECT_FLOAT_EQ(dv[0], 2.0f);
+    cv::Vec3f nv = -u;
+    EXPECT_FLOAT_EQ(nv[2], -3.0f);
+    u += w;
+    EXPECT_FLOAT_EQ(u[0], 5.0f);
+
+    // Vec4 quaternion-style product
+    cv::Vec4d q1(1, 0, 0, 0), q2(0, 1, 0, 0);
+    cv::Vec4d q = q1 * q2;
+    EXPECT_DOUBLE_EQ(q[1], 1.0);
+
+    // interop with Mat
+    cv::Matx33f eye = cv::Matx33f::eye();
+    cv::Mat em(eye);
+    EXPECT_FLOAT_EQ(em.at<float>(1, 1), 1.0f);
+}

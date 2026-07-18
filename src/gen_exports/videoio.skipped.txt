@@ -1,0 +1,25 @@
+odd-name: cv.<unnamed>
+odd-name: cv.VideoCapture.operator >>
+odd-name: cv.VideoWriter.operator <<
+pruned (compile-verify): cv::AVIReadContainer
+pruned (compile-verify): cv::AVIWriteContainer
+pruned (compile-verify): cv::CLOSE_CAMERA
+pruned (compile-verify): cv::COLORSPACE_BGR
+pruned (compile-verify): cv::COLORSPACE_GRAY
+pruned (compile-verify): cv::COLORSPACE_RGBA
+pruned (compile-verify): cv::COLORSPACE_YUV444P
+pruned (compile-verify): cv::Codecs
+pruned (compile-verify): cv::MJPEG
+pruned (compile-verify): cv::OPEN_CAMERA
+pruned (compile-verify): cv::PluginStreamReader
+pruned (compile-verify): cv::SHOW_TRACKBAR
+pruned (compile-verify): cv::StreamType
+pruned (compile-verify): cv::UPDATE_IMAGE_ELEMENT
+pruned (compile-verify): cv::db
+pruned (compile-verify): cv::dc
+pruned (compile-verify): cv::icvExtractPattern
+pruned (compile-verify): cv::pc
+pruned (compile-verify): cv::wb
+pruned (compile-verify): cv::winrt_imshow
+pruned (compile-verify): cv::winrt_onVisibilityChanged
+pruned (compile-verify): cv::winrt_setFrameContainer

@@ -1,0 +1,6 @@
+# names failing compile-verification — maintained by tools/prune_loop.py
+MSTAlgorithm   # 'MSTAlgorithm' has not been declared in 'cv'
+MSTEdge   # 'MSTEdge' has not been declared in 'cv'
+MST_KRUSKAL   # 'MST_KRUSKAL' has not been declared in 'cv'
+MST_PRIM   # 'MST_PRIM' has not been declared in 'cv'
+buildMST   # 'buildMST' has not been declared in 'cv'

@@ -1,0 +1,325 @@
+HEADER PARSE FAIL eigen.hpp: Failed to evaluate '#if EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3' directive, stripped down to 'EIGEN_WORLD_VERSION == 3 and EIGEN_MAJOR_VERSION >= 3'
+HEADER PARSE FAIL fast_math.hpp: Failed to evaluate '#elif defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \' directive, stripped down to 'False or \'
+HEADER PARSE FAIL neon_utils.hpp: Failed to evaluate '#if CV_NEON' directive, stripped down to 'CV_NEON'
+HEADER PARSE FAIL vsx_utils.hpp: Failed to evaluate '#if CV_VSX' directive, stripped down to 'CV_VSX'
+non-cv: cvAlign
+non-cv: cvAlignPtr
+non-cv: cvCeil
+non-cv: cvFloor
+non-cv: cvRound
+non-cv: cvRound64
+non-cv: cvTrunc
+non-cv: struct
+odd-name: cv."C" typedef int
+odd-name: cv.AsyncArray.operator=
+odd-name: cv.CommandLineParser.operator =
+odd-name: cv.DMatch.operator <
+odd-name: cv.FileNode.<unnamed>
+odd-name: cv.FileNode.operator double
+odd-name: cv.FileNode.operator float
+odd-name: cv.FileNode.operator int
+odd-name: cv.FileNode.operator int64_t
+odd-name: cv.FileNode.operator=
+odd-name: cv.FileNode.operator[]
+odd-name: cv.FileNodeIterator.operator *
+odd-name: cv.FileNodeIterator.operator ++
+odd-name: cv.FileNodeIterator.operator +=
+odd-name: cv.FileNodeIterator.operator=
+odd-name: cv.FileStorage.operator[]
+odd-name: cv.Hamming.operator ()
+odd-name: cv.Mat.<unnamed>
+odd-name: cv.Mat.operator ()
+odd-name: cv.Mat.operator =
+odd-name: cv.MatConstIterator.operator *
+odd-name: cv.MatConstIterator.operator ++
+odd-name: cv.MatConstIterator.operator +=
+odd-name: cv.MatConstIterator.operator --
+odd-name: cv.MatConstIterator.operator -=
+odd-name: cv.MatConstIterator.operator =
+odd-name: cv.MatConstIterator.operator []
+odd-name: cv.MatExpr.operator ()
+odd-name: cv.MatExpr.operator Mat
+odd-name: cv.MatShape.<unnamed>
+odd-name: cv.MatShape.operator ()
+odd-name: cv.MatShape.operator =
+odd-name: cv.MatShape.operator []
+odd-name: cv.MatStep.operator =
+odd-name: cv.MatStep.operator size_t
+odd-name: cv.MatStep.operator[]
+odd-name: cv.NAryMatIterator.operator ++
+odd-name: cv.PCA.operator ()
+odd-name: cv.ParallelLoopBody.operator ()
+odd-name: cv.ParallelLoopBodyLambdaWrapper.operator ()
+odd-name: cv.RNG.<unnamed>
+odd-name: cv.RNG.operator ()
+odd-name: cv.RNG.operator ==
+odd-name: cv.RNG.operator double
+odd-name: cv.RNG.operator float
+odd-name: cv.RNG.operator int
+odd-name: cv.RNG.operator schar
+odd-name: cv.RNG.operator short
+odd-name: cv.RNG.operator uchar
+odd-name: cv.RNG.operator unsigned
+odd-name: cv.RNG.operator ushort
+odd-name: cv.RNG_MT19937.operator ()
+odd-name: cv.RNG_MT19937.operator double
+odd-name: cv.RNG_MT19937.operator float
+odd-name: cv.RNG_MT19937.operator int
+odd-name: cv.RNG_MT19937.operator unsigned
+odd-name: cv.SVD.operator ()
+odd-name: cv.SparseMat.<unnamed>
+odd-name: cv.SparseMat.operator =
+odd-name: cv.SparseMatConstIterator.operator ++
+odd-name: cv.SparseMatConstIterator.operator --
+odd-name: cv.SparseMatConstIterator.operator =
+odd-name: cv.SparseMatIterator.operator ++
+odd-name: cv.SparseMatIterator.operator =
+odd-name: cv.UMat.<unnamed>
+odd-name: cv.UMat.operator ()
+odd-name: cv.UMat.operator =
+odd-name: cv.Vec3d operator *
+odd-name: cv.Vec3f operator *
+odd-name: cv.cuda.GpuData.operator=
+odd-name: cv.cuda.GpuMat.operator ()
+odd-name: cv.cuda.GpuMat.operator =
+odd-name: cv.cuda.GpuMatND.operator ()
+odd-name: cv.cuda.GpuMatND.operator GpuMat
+odd-name: cv.cuda.GpuMatND.operator=
+odd-name: cv.cuda.HostMem.operator =
+odd-name: cv.cuda.Stream.operator bool_type
+odd-name: cv.detail.CV_NORETURN check_failed_MatChannels
+odd-name: cv.detail.CV_NORETURN check_failed_MatDepth
+odd-name: cv.detail.CV_NORETURN check_failed_MatType
+odd-name: cv.detail.CV_NORETURN check_failed_auto
+odd-name: cv.detail.CV_NORETURN check_failed_false
+odd-name: cv.detail.CV_NORETURN check_failed_true
+odd-name: cv.ocl.Context.operator =
+odd-name: cv.ocl.Context.operator=
+odd-name: cv.ocl.Device.<unnamed>
+odd-name: cv.ocl.Device.operator =
+odd-name: cv.ocl.Image2D.operator =
+odd-name: cv.ocl.Image2D.operator=
+odd-name: cv.ocl.Kernel.operator =
+odd-name: cv.ocl.KernelArg.<unnamed>
+odd-name: cv.ocl.OpenCLExecutionContext.operator=
+odd-name: cv.ocl.Platform.operator =
+odd-name: cv.ocl.PlatformInfo.operator =
+odd-name: cv.ocl.Program.operator =
+odd-name: cv.ocl.ProgramSource.operator =
+odd-name: cv.ocl.Queue.operator =
+odd-name: cv.ocl.internal.ProgramEntry.operator ProgramSource&
+odd-name: cv.operator !
+odd-name: cv.operator !=
+odd-name: cv.operator &
+odd-name: cv.operator &=
+odd-name: cv.operator *
+odd-name: cv.operator +
+odd-name: cv.operator -
+odd-name: cv.operator /
+odd-name: cv.operator <
+odd-name: cv.operator <<
+odd-name: cv.operator <=
+odd-name: cv.operator ==
+odd-name: cv.operator >
+odd-name: cv.operator >=
+odd-name: cv.operator >>
+odd-name: cv.operator ^
+odd-name: cv.operator std.string
+odd-name: cv.operator |
+odd-name: cv.operator ~
+odd-name: cv.softdouble.operator !=
+odd-name: cv.softdouble.operator %
+odd-name: cv.softdouble.operator %=
+odd-name: cv.softdouble.operator *
+odd-name: cv.softdouble.operator *=
+odd-name: cv.softdouble.operator +
+odd-name: cv.softdouble.operator +=
+odd-name: cv.softdouble.operator -
+odd-name: cv.softdouble.operator -=
+odd-name: cv.softdouble.operator /
+odd-name: cv.softdouble.operator /=
+odd-name: cv.softdouble.operator <
+odd-name: cv.softdouble.operator <=
+odd-name: cv.softdouble.operator ==
+odd-name: cv.softdouble.operator >
+odd-name: cv.softdouble.operator >=
+odd-name: cv.softdouble.operator double
+odd-name: cv.softdouble.operator softfloat
+odd-name: cv.softdouble.operator=
+odd-name: cv.softfloat.operator !=
+odd-name: cv.softfloat.operator %
+odd-name: cv.softfloat.operator %=
+odd-name: cv.softfloat.operator *
+odd-name: cv.softfloat.operator *=
+odd-name: cv.softfloat.operator +
+odd-name: cv.softfloat.operator +=
+odd-name: cv.softfloat.operator -
+odd-name: cv.softfloat.operator -=
+odd-name: cv.softfloat.operator /
+odd-name: cv.softfloat.operator /=
+odd-name: cv.softfloat.operator <
+odd-name: cv.softfloat.operator <=
+odd-name: cv.softfloat.operator ==
+odd-name: cv.softfloat.operator >
+odd-name: cv.softfloat.operator >=
+odd-name: cv.softfloat.operator float
+odd-name: cv.softfloat.operator softdouble
+odd-name: cv.softfloat.operator=
+odd-name: cv.void error
+odd-name: cv.void terminate
+pruned (compile-verify): cv::BlockedRange
+pruned (compile-verify): cv::Split
+pruned (compile-verify): cv::allocSingletonBuffer
+pruned (compile-verify): cv::allocSingletonNewBuffer
+pruned (compile-verify): cv::cuda::BufferPool
+pruned (compile-verify): cv::cuda::DYNAMIC_PARALLELISM
+pruned (compile-verify): cv::cuda::DeviceInfo
+pruned (compile-verify): cv::cuda::EventAccessor
+pruned (compile-verify): cv::cuda::FEATURE_SET_COMPUTE_10
+pruned (compile-verify): cv::cuda::FEATURE_SET_COMPUTE_11
+pruned (compile-verify): cv::cuda::FEATURE_SET_COMPUTE_12
+pruned (compile-verify): cv::cuda::FEATURE_SET_COMPUTE_13
+pruned (compile-verify): cv::cuda::FEATURE_SET_COMPUTE_20
+pruned (compile-verify): cv::cuda::FEATURE_SET_COMPUTE_21
+pruned (compile-verify): cv::cuda::FEATURE_SET_COMPUTE_30
+pruned (compile-verify): cv::cuda::FEATURE_SET_COMPUTE_32
+pruned (compile-verify): cv::cuda::FEATURE_SET_COMPUTE_35
+pruned (compile-verify): cv::cuda::FEATURE_SET_COMPUTE_50
+pruned (compile-verify): cv::cuda::FeatureSet
+pruned (compile-verify): cv::cuda::GLOBAL_ATOMICS
+pruned (compile-verify): cv::cuda::GpuData
+pruned (compile-verify): cv::cuda::NATIVE_DOUBLE
+pruned (compile-verify): cv::cuda::SHARED_ATOMICS
+pruned (compile-verify): cv::cuda::StreamAccessor
+pruned (compile-verify): cv::cuda::TargetArchs
+pruned (compile-verify): cv::cuda::WARP_SHUFFLE_FUNCTIONS
+pruned (compile-verify): cv::cuda::createContinuous
+pruned (compile-verify): cv::cuda::createGpuMatFromCudaMemory
+pruned (compile-verify): cv::cuda::deviceSupports
+pruned (compile-verify): cv::cuda::ensureSizeIsEnough
+pruned (compile-verify): cv::cuda::getCudaDriverApiErrorMessage
+pruned (compile-verify): cv::cuda::getCudaEnabledDeviceCount
+pruned (compile-verify): cv::cuda::getDevice
+pruned (compile-verify): cv::cuda::getInputMat
+pruned (compile-verify): cv::cuda::getNppErrorMessage
+pruned (compile-verify): cv::cuda::getOutputMat
+pruned (compile-verify): cv::cuda::printCudaDeviceInfo
+pruned (compile-verify): cv::cuda::printShortCudaDeviceInfo
+pruned (compile-verify): cv::cuda::registerPageLocked
+pruned (compile-verify): cv::cuda::resetDevice
+pruned (compile-verify): cv::cuda::setBufferPoolConfig
+pruned (compile-verify): cv::cuda::setBufferPoolUsage
+pruned (compile-verify): cv::cuda::setDevice
+pruned (compile-verify): cv::cuda::setGlDevice
+pruned (compile-verify): cv::cuda::syncOutput
+pruned (compile-verify): cv::cuda::unregisterPageLocked
+pruned (compile-verify): cv::cuda::wrapStream
+pruned (compile-verify): cv::currentParallelFramework
+pruned (compile-verify): cv::double
+pruned (compile-verify): cv::float
+pruned (compile-verify): cv::int
+pruned (compile-verify): cv::ogl::LINES
+pruned (compile-verify): cv::ogl::LINE_LOOP
+pruned (compile-verify): cv::ogl::LINE_STRIP
+pruned (compile-verify): cv::ogl::POINTS
+pruned (compile-verify): cv::ogl::POLYGON
+pruned (compile-verify): cv::ogl::QUADS
+pruned (compile-verify): cv::ogl::QUAD_STRIP
+pruned (compile-verify): cv::ogl::RenderModes
+pruned (compile-verify): cv::ogl::TRIANGLES
+pruned (compile-verify): cv::ogl::TRIANGLE_FAN
+pruned (compile-verify): cv::ogl::TRIANGLE_STRIP
+pruned (compile-verify): cv::ogl::convertFromGLTexture2D
+pruned (compile-verify): cv::ogl::convertToGLTexture2D
+pruned (compile-verify): cv::ogl::mapGLBuffer
+pruned (compile-verify): cv::ogl::ocl::initializeContextFromGL
+pruned (compile-verify): cv::ogl::render
+pruned (compile-verify): cv::ogl::unmapGLBuffer
+pruned (compile-verify): cv::scalarToRawData
+pruned (compile-verify): cv::schar
+pruned (compile-verify): cv::short
+pruned (compile-verify): cv::uchar
+pruned (compile-verify): cv::unsigned
+pruned (compile-verify): cv::ushort
+skipped-ns: cv.detail.TEST_CUSTOM
+skipped-ns: cv.detail.TEST_EQ
+skipped-ns: cv.detail.TEST_GE
+skipped-ns: cv.detail.TEST_GT
+skipped-ns: cv.detail.TEST_LE
+skipped-ns: cv.detail.TEST_LT
+skipped-ns: cv.detail.TEST_NE
+skipped-ns: cv.detail.TestOp
+skipped-ns: cv.detail.depthToString_
+skipped-ns: cv.detail.typeToString_
+skipped-ns: cv.directx.convertFromD3D10Texture2D
+skipped-ns: cv.directx.convertFromD3D11Texture2D
+skipped-ns: cv.directx.convertFromDirect3DSurface9
+skipped-ns: cv.directx.convertToD3D10Texture2D
+skipped-ns: cv.directx.convertToD3D11Texture2D
+skipped-ns: cv.directx.convertToDirect3DSurface9
+skipped-ns: cv.directx.getTypeFromD3DFORMAT
+skipped-ns: cv.directx.getTypeFromDXGI_FORMAT
+skipped-ns: cv.directx.ocl.initializeContextFromD3D10Device
+skipped-ns: cv.directx.ocl.initializeContextFromD3D11Device
+skipped-ns: cv.directx.ocl.initializeContextFromDirect3DDevice9
+skipped-ns: cv.directx.ocl.initializeContextFromDirect3DDevice9Ex
+skipped-ns: cv.internal.WriteStructContext.WriteStructContext
+skipped-ns: cv.internal.WriteStructContext.~WriteStructContext
+skipped-ns: cv.ocl.internal.isCLBuffer
+skipped-ns: cv.ocl.internal.isOpenCLForced
+skipped-ns: cv.ocl.internal.isPerformanceCheckBypassed
+skipped-ns: cv.samples.addSamplesDataSearchPath
+skipped-ns: cv.samples.addSamplesDataSearchSubDirectory
+skipped-ns: cv.samples.findFile
+skipped-ns: cv.samples.findFileOrKeep
+skipped-ns: cv.utils.ClassWithKeywordProperties.ClassWithKeywordProperties
+skipped-ns: cv.utils.FunctionParams.setLambda
+skipped-ns: cv.utils.FunctionParams.setSigma
+skipped-ns: cv.utils.addDataSearchPath
+skipped-ns: cv.utils.addDataSearchSubDirectory
+skipped-ns: cv.utils.copyMatAndDumpNamedArguments
+skipped-ns: cv.utils.dumpBool
+skipped-ns: cv.utils.dumpCString
+skipped-ns: cv.utils.dumpDouble
+skipped-ns: cv.utils.dumpFloat
+skipped-ns: cv.utils.dumpInputArray
+skipped-ns: cv.utils.dumpInputArrayOfArrays
+skipped-ns: cv.utils.dumpInputOutputArray
+skipped-ns: cv.utils.dumpInputOutputArrayOfArrays
+skipped-ns: cv.utils.dumpInt
+skipped-ns: cv.utils.dumpInt64
+skipped-ns: cv.utils.dumpRange
+skipped-ns: cv.utils.dumpRect
+skipped-ns: cv.utils.dumpRotatedRect
+skipped-ns: cv.utils.dumpSizeT
+skipped-ns: cv.utils.dumpString
+skipped-ns: cv.utils.dumpTermCriteria
+skipped-ns: cv.utils.dumpVec2i
+skipped-ns: cv.utils.dumpVectorOfDouble
+skipped-ns: cv.utils.dumpVectorOfInt
+skipped-ns: cv.utils.dumpVectorOfRect
+skipped-ns: cv.utils.findDataFile
+skipped-ns: cv.utils.fs.getCacheDirectoryForDownloads
+skipped-ns: cv.utils.generateVectorOfInt
+skipped-ns: cv.utils.generateVectorOfMat
+skipped-ns: cv.utils.generateVectorOfRect
+skipped-ns: cv.utils.getBinLocation
+skipped-ns: cv.utils.getThreadID
+skipped-ns: cv.utils.nested.OriginalClassName.OriginalClassName
+skipped-ns: cv.utils.nested.OriginalClassName.Params.Params
+skipped-ns: cv.utils.nested.OriginalClassName.create
+skipped-ns: cv.utils.nested.OriginalClassName.getFloatParam
+skipped-ns: cv.utils.nested.OriginalClassName.getIntParam
+skipped-ns: cv.utils.nested.OriginalClassName.originalName
+skipped-ns: cv.utils.nested.testEchoBooleanFunction
+skipped-ns: cv.utils.testAsyncArray
+skipped-ns: cv.utils.testAsyncException
+skipped-ns: cv.utils.testOverloadResolution
+skipped-ns: cv.utils.testOverwriteNativeMethod
+skipped-ns: cv.utils.testRaiseGeneralException
+skipped-ns: cv.utils.testReservedKeywordConversion
+skipped-ns: cv.utils.testRotatedRect
+skipped-ns: cv.utils.testRotatedRectVector
+skipped-ns: cv.va_intel.convertFromVASurface
+skipped-ns: cv.va_intel.convertToVASurface
+skipped-ns: cv.va_intel.ocl.initializeContextFromVA

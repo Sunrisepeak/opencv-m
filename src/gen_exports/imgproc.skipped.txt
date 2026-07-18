@@ -1,0 +1,6 @@
+odd-name: cv.Filter2DParams.Scalar borderValue = Scalar
+odd-name: cv.FontFace.operator ->
+odd-name: cv.LineIterator.operator *
+odd-name: cv.LineIterator.operator ++
+pruned (compile-verify): cv::HoughCirclesWithAccumulator
+pruned (compile-verify): cv::HoughLinesWithAccumulator

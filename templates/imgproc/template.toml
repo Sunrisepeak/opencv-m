@@ -1,0 +1,4 @@
+[template]
+description  = "Image pipeline skeleton with import opencv.cv"
+default      = true
+post_message = "cd into the project and run `mcpp run -- <image-file>`."

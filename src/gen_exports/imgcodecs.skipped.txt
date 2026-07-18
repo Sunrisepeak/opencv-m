@@ -1,0 +1,6 @@
+odd-name: cv.ImageCollection.iterator.bool operator!=
+odd-name: cv.ImageCollection.iterator.bool operator==
+odd-name: cv.ImageCollection.iterator.operator *
+odd-name: cv.ImageCollection.iterator.operator++
+odd-name: cv.ImageCollection.iterator.operator- >
+odd-name: cv.ImageCollection.operator[]

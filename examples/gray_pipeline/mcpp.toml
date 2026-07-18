@@ -1,0 +1,12 @@
+[package]
+name        = "opencv-gray-pipeline"
+version     = "0.1.0"
+description = "imread → resize → grayscale → imwrite, all through import opencv.cv"
+license     = "Apache-2.0"
+
+[dependencies]
+opencv = { path = "../.." }
+
+[targets.opencv-gray-pipeline]
+kind = "bin"
+main = "src/main.cpp"

@@ -1,0 +1,11 @@
+[package]
+name        = "opencv-probe"
+version     = "0.1.0"
+description = "Show the OpenCV build surface through import opencv.cv"
+license     = "Apache-2.0"
+
+[dependencies]
+opencv = { path = "../.." }
+[targets.opencv-probe]
+kind = "bin"
+main = "src/main.cpp"

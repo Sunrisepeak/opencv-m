@@ -1,0 +1,20 @@
+// {{name}} — OpenCV 5 via C++23 modules: same API, no headers.
+import std;
+import opencv.cv;
+
+int main(int argc, char** argv) {
+    if (argc < 2) {
+        std::println(stderr, "usage: {{name}} <image-file>");
+        return 1;
+    }
+    cv::Mat img = cv::imread(argv[1], cv::IMREAD_COLOR);
+    if (img.empty()) {
+        std::println(stderr, "cannot read {}", argv[1]);
+        return 1;
+    }
+    std::println("{}: {}x{}, {} channels", argv[1], img.cols, img.rows, img.channels());
+    cv::Mat gray;
+    cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
+    cv::imwrite("out.png", gray);
+    std::println("out.png written");
+}

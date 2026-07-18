@@ -1,0 +1,2 @@
+# names failing compile-verification — maintained by tools/prune_loop.py
+winrt_initContainer   # 'winrt_initContainer' has not been declared in 'cv'

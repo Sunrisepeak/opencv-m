@@ -1,0 +1,9 @@
+non-cv: class
+odd-name: cv.<unnamed>
+odd-name: cv.ModelConstraintFunction = std.function < bool
+odd-name: cv.Subdiv2D.<unnamed>
+pruned (compile-verify): cv::MSTAlgorithm
+pruned (compile-verify): cv::MSTEdge
+pruned (compile-verify): cv::MST_KRUSKAL
+pruned (compile-verify): cv::MST_PRIM
+pruned (compile-verify): cv::buildMST

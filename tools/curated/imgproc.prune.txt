@@ -1,0 +1,3 @@
+# names failing compile-verification — maintained by tools/prune_loop.py
+HoughCirclesWithAccumulator   # 'HoughCirclesWithAccumulator' has not been declared in 'cv'
+HoughLinesWithAccumulator   # 'HoughLinesWithAccumulator' has not been declared in 'cv'

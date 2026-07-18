@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-release:
+    name: verify (linux) + GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install nasm
+        run: sudo apt-get update && sudo apt-get install -y nasm
+
+      - name: Install Xlings
+        env:
+          XLINGS_NON_INTERACTIVE: 1
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/openxlings/xlings/refs/heads/main/tools/other/quick_install.sh | bash
+          echo "$HOME/.xlings/subos/current/bin" >> "$GITHUB_PATH"
+
+      - name: Install project tools
+        run: |
+          xlings update
+          xlings install
+
+      - name: Set default toolchain
+        run: |
+          mcpp toolchain install gcc 16.1.0
+          mcpp toolchain default gcc@16.1.0
+          mcpp --version
+
+      - name: Build + test at the tagged revision
+        run: |
+          mcpp build
+          mcpp test
+
+      - name: Verify tag matches package version
+        run: |
+          pkg_ver="$(sed -n 's/^version *= *"\(.*\)"/\1/p' mcpp.toml | head -1)"
+          tag="${GITHUB_REF_NAME#v}"
+          test "$pkg_ver" = "$tag" || { echo "tag $GITHUB_REF_NAME != package version $pkg_ver"; exit 1; }
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "opencv-m $GITHUB_REF_NAME" \
+            --generate-notes \
+            --verify-tag

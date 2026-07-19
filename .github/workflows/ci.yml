@@ -18,12 +18,13 @@ jobs:
   linux:
     name: mcpp (ubuntu-latest, required)
     runs-on: ubuntu-latest
-    # compat.opencv now source-builds OpenCV 5 AND pulls compat.ffmpeg
-    # transitively for the videoio backend, both from source on a cold runner
-    # (the ~/.mcpp registry is not cached here). 90 leaves headroom over the
-    # ~50-min cold build; the default feature set excludes dnn, so this is the
-    # lean base+videoio profile, not the heavy dnn variant.
-    timeout-minutes: 90
+    # This job source-builds OpenCV 5 (+ transitive compat.ffmpeg) on a cold
+    # runner TWICE: once for the default base+videoio profile, then the
+    # `--features dnn,unifont` step re-keys the store into a second variant
+    # (base + dnn + unifont, dnn dominating). ~50 min each cold; 150 leaves
+    # headroom. The ~/.mcpp registry cache would amortize this, but it is not
+    # persisted here.
+    timeout-minutes: 150
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,6 +55,14 @@ jobs:
 
       - name: Run tests (API surface + macros mix + codec roundtrips)
         run: mcpp test
+
+      # Optional features (mcpp#243 dep/feat forwarding): dnn adds the
+      # opencv.dnn module interface + forwards compat.opencv/dnn; unifont
+      # forwards compat.opencv/unifont. Built together = one extra OpenCV
+      # variant (base + dnn + unifont). The feature-gated tests are no-ops
+      # in the default `mcpp test` above, so this is where they run.
+      - name: Run feature tests (dnn + unifont module interfaces)
+        run: mcpp test --features dnn,unifont
 
       - name: Run probe example (path-dep consumer)
         run: |

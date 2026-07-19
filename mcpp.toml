@@ -1,23 +1,50 @@
 [package]
 name        = "opencv"
-version     = "0.0.3"
+version     = "0.0.4"
 description = "C++23 module layer for OpenCV 5 — import opencv.cv; (API and habits unchanged, just no headers)"
 license     = "MIT"
 
 [build]
-sources      = ["src/**/*.cppm"]
+# The default surface (opencv.cv umbrella + per-module interfaces). dnn.cppm is
+# NOT listed here on purpose: it needs <opencv2/dnn.hpp>, which only exists when
+# the underlying library is built with its dnn module — so it is added by the
+# `dnn` feature below, and `import opencv.dnn;` fails (correctly) without it.
+sources = [
+    "src/opencv.cppm",
+    "src/cv.cppm",
+    "src/core.cppm",
+    "src/imgproc.cppm",
+    "src/imgcodecs.cppm",
+    "src/videoio.cppm",
+    "src/highgui.cppm",
+    "src/flann.cppm",
+    "src/geometry.cppm",
+]
 include_dirs = ["include"]
 
 [dependencies]
 # The full OpenCV 5.0.0 source build. compat.opencv is the unified descriptor
-# (mcpp-index #79): the from-source build the old compat.opencv5 alias carried,
-# now under its permanent name. Pulls compat.ffmpeg transitively for the videoio
-# FFmpeg backend. Optional features (unifont, dnn) are NOT forwarded here yet —
-# that needs mcpp#243 (dep-feature forwarding); see README.
+# (mcpp-index #79): the from-source build, pulling compat.ffmpeg transitively for
+# the videoio FFmpeg backend. Its optional `unifont`/`dnn` features are exposed
+# through this package's own features below via mcpp#243 dep-feature forwarding.
 compat.opencv = "5.0.0"
 
 [dev-dependencies]
 compat.gtest = "1.15.2"
+
+# ── Optional features (mcpp#243 dep/feat forwarding, mcpp >= 0.0.99) ──────────
+# Each forwards the matching compat.opencv feature, so enabling it here builds
+# the underlying library with that feature AND (for dnn) adds the module
+# interface. Consumers opt in: opencv = { version = "0.0.4", features = ["dnn"] }.
+[features]
+# dnn: the deep-learning module. Adds the opencv.dnn interface source and
+# forwards compat.opencv/dnn (+ modules/dnn, vendored protobuf, mlas). ~309
+# extra TUs in the underlying build — only for consumers that ask.
+dnn = { sources = ["src/dnn.cppm"], forward = ["compat.opencv/dnn"] }
+# unifont: Unicode/CJK putText coverage. Pure forward — no new module surface
+# (FontFace("uni") is already in the imgproc interface); it just builds
+# compat.opencv with its unifont feature (embeds the WenQuanYi Micro Hei font).
+unifont = { forward = ["compat.opencv/unifont"] }
 
 [targets.opencv]
 kind = "lib"

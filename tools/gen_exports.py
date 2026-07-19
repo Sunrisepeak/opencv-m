@@ -25,7 +25,7 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-MODULE_ORDER = ["core", "imgproc", "imgcodecs", "videoio", "highgui", "flann", "geometry"]
+MODULE_ORDER = ["core", "imgproc", "imgcodecs", "videoio", "highgui", "flann", "geometry", "dnn"]
 SKIP_HEADER_PARTS = ("detail", "legacy", "private", "cuda", "opencl", "hal",
                      "utils", "llapi", "parallel", "detection_based_tracker")
 SKIP_NS = ("detail", "internal", "traits", "hal", "instr", "utils", "samples",

@@ -1,0 +1,24 @@
+non-cv: class
+odd-name: cv.dnn..const_iterator begin
+odd-name: cv.dnn..const_iterator end
+odd-name: cv.dnn.<unnamed>.is_neg
+odd-name: cv.dnn.Arg.operator int
+odd-name: cv.dnn.DictValue.operator=
+odd-name: cv.dnn.Layer.void finalize
+odd-name: cv.dnn.Layer.void forward
+odd-name: cv.dnn.Model.operator Net&
+odd-name: cv.dnn.Model.operator=
+odd-name: cv.dnn.std.ostream operator <<
+pruned (compile-verify): cv::dnn::_Range
+pruned (compile-verify): cv::dnn::concat
+pruned (compile-verify): cv::dnn::getActivationFunc
+pruned (compile-verify): cv::dnn::getLayerFactoryImpl
+pruned (compile-verify): cv::dnn::getLayerFactoryMutex
+pruned (compile-verify): cv::dnn::getPlane
+pruned (compile-verify): cv::dnn::isAllOnes
+pruned (compile-verify): cv::dnn::normalize_axis
+pruned (compile-verify): cv::dnn::normalize_axis_range
+pruned (compile-verify): cv::dnn::shape
+pruned (compile-verify): cv::dnn::slice
+pruned (compile-verify): cv::dnn::toString
+pruned (compile-verify): cv::dnn::total

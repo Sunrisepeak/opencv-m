@@ -31,10 +31,10 @@ int main() {
   [`<opencv-m/macros.hpp>`](include/opencv-m/macros.hpp) **before** importing.
 - **Scope** (the compat.opencv profile): core, imgproc, imgcodecs
   (PNG + JPEG), highgui (headless), videoio (V4L2 + **FFmpeg**) + flann,
-  geometry. Linux-x86_64 first. Optional extras (`dnn` deep-learning module,
-  `unifont` CJK text) already exist as `compat.opencv` **features**; the
-  module layer will forward them as `opencv` features (`import opencv.dnn;`)
-  once mcpp gains dep-feature forwarding (mcpp#243) — see Notes.
+  geometry. Linux-x86_64 first. Optional **features** (mcpp >= 0.0.99):
+  `dnn` adds the `import opencv.dnn;` module interface and builds the
+  deep-learning module; `unifont` adds Unicode/CJK `putText` coverage. Enable
+  per-consumer: `opencv = { version = "0.0.4", features = ["dnn"] }` — see Notes.
 
 ## Use
 
@@ -95,12 +95,20 @@ export-list diffs.
   Mat/MatExpr delegation) + `src/matx_ops.inc` (v0.0.3: the full Matx/Vec
   algebra — 50 operators incl. matrix multiply, determinant/trace/norm).
   See `src/gen_exports/*.skipped.txt` for the rest.
-- **Optional features (compat level today, module level pending mcpp#243):**
-  `compat.opencv` ships `dnn` (deep-learning module — modules/dnn + vendored
-  protobuf + mlas) and `unifont` (Unicode/CJK `putText`) as opt-in features. A
-  power user can reach them today by depending on `compat.opencv` directly with
-  `features = ["dnn"]`. Exposing them through this module package as
-  `opencv = { features = ["dnn"] }` (so `import opencv.dnn;` pulls the dnn TUs
-  only when asked) needs dep-feature forwarding — tracked upstream as mcpp#243.
+- **Optional features (`[features]`, mcpp >= 0.0.99 dep/feat forwarding):**
+  `dnn = { version = "0.0.4", features = ["dnn"] }` compiles `src/dnn.cppm`
+  (the `import opencv.dnn;` interface — `Net`, `blobFromImage`, `readNet`, …)
+  and forwards `compat.opencv/dnn` so the underlying library is built with the
+  deep-learning module (+309 TUs: modules/dnn + vendored protobuf + mlas) —
+  only for consumers who ask. `unifont` is a pure forward (no new surface): it
+  builds `compat.opencv` with the WenQuanYi Micro Hei font so the `"uni"`
+  `FontFace` renders CJK. `dnn` stays out of the `opencv.cv` umbrella by design.
+  <details><summary>compat level (advanced)</summary>
+  These simply forward the same-named `compat.opencv` features, so a consumer
+  that depends on `compat.opencv` directly can also enable them there with
+  `compat.opencv = { version = "5.0.0", features = ["dnn"] }` — the module
+  package's features are the ergonomic front for that. Forwarding uses mcpp's
+  `dep/feat` mechanism (mcpp#243, mcpp >= 0.0.99).
+  </details>
 - License: this wrapper repo is MIT; upstream OpenCV arrives via
   `compat.opencv` under **Apache-2.0**.

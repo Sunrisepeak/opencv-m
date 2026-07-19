@@ -1,0 +1,16 @@
+# names failing compile-verification for opencv.dnn — internal shape_utils.hpp
+# / layer-factory helpers that hdr_parser collected but that are not part of
+# the public surface reachable through <opencv2/dnn.hpp> + all_layers.hpp.
+dnn::concat
+dnn::getActivationFunc
+dnn::getLayerFactoryImpl
+dnn::getLayerFactoryMutex
+dnn::getPlane
+dnn::isAllOnes
+dnn::normalize_axis
+dnn::normalize_axis_range
+dnn::shape
+dnn::slice
+dnn::toString
+dnn::total
+dnn::_Range

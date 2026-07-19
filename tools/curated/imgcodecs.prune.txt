@@ -1,0 +1,2 @@
+# names failing compile-verification — maintained by tools/prune_loop.py
+imwritemulti   # static inline (internal linkage) — clang rejects export; use imwrite(vector) instead

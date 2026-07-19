@@ -1,3 +1,5 @@
 # names failing compile-verification — maintained by tools/prune_loop.py
 HoughCirclesWithAccumulator   # 'HoughCirclesWithAccumulator' has not been declared in 'cv'
 HoughLinesWithAccumulator   # 'HoughLinesWithAccumulator' has not been declared in 'cv'
+initWideAngleProjMap   # static inline (internal linkage) — clang rejects export; unusable across module boundary
+morphologyDefaultBorderValue   # static inline (internal linkage) — clang rejects export

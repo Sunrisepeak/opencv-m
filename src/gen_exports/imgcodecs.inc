@@ -188,5 +188,4 @@ export namespace cv {
     using cv::imwrite;
     using cv::imwriteWithMetadata;
     using cv::imwriteanimation;
-    using cv::imwritemulti;
 }

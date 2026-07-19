@@ -18,17 +18,19 @@ jobs:
   linux:
     name: mcpp (ubuntu-latest, required)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # compat.opencv now source-builds OpenCV 5 AND pulls compat.ffmpeg
+    # transitively for the videoio backend, both from source on a cold runner
+    # (the ~/.mcpp registry is not cached here). 90 leaves headroom over the
+    # ~50-min cold build; the default feature set excludes dnn, so this is the
+    # lean base+videoio profile, not the heavy dnn variant.
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # compat.opencv5 carries 27 NASM .asm units; mcpp resolves nasm
-      # PATH-first — ubuntu ships nasm >= 2.16 (self-bootstrap fallback
-      # exists but is still racy pre mcpp#232 fix).
-      - name: Install nasm
-        run: sudo apt-get update && sudo apt-get install -y nasm && nasm --version
-
+      # No apt nasm: compat.opencv's NASM .asm units (jpeg-turbo SIMD, core AVX)
+      # are covered by mcpp's synchronous nasm bootstrap via xlings (mcpp#232,
+      # floor 0.0.98) — the same drop already proven in mcpp-index and ffmpeg-m.
       - name: Install Xlings
         env:
           XLINGS_NON_INTERACTIVE: 1
@@ -47,7 +49,7 @@ jobs:
           mcpp toolchain default gcc@16.1.0
           mcpp --version
 
-      - name: Build library (via compat.opencv5 source build)
+      - name: Build library (via compat.opencv source build)
         run: mcpp build
 
       - name: Run tests (API surface + macros mix + codec roundtrips)

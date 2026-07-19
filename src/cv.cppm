@@ -1,6 +1,6 @@
 // opencv.cv — umbrella module: the `import opencv.cv;` analog of
 // `#include <opencv2/opencv.hpp>` / Python's `import cv2` for the modules
-// enabled in the current compat.opencv5 profile.
+// enabled in the current compat.opencv profile.
 export module opencv.cv;
 
 export import opencv.core;

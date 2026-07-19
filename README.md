@@ -15,12 +15,13 @@ int main() {
 ```
 
 - **Source build, no CMake at build time.** The
-  [`compat.opencv5`](https://github.com/mcpplibs/mcpp-index) index package
+  [`compat.opencv`](https://github.com/mcpplibs/mcpp-index) index package
   carries a frozen config snapshot + an embedded `build.mcpp` that synthesizes
   OpenCV's build-time generated files on the consumer; mcpp compiles all of
-  OpenCV 5.0.0 (457 TUs incl. 27 NASM `.asm`, **SIMD runtime dispatch kept**)
-  directly — cold build ≈ 33 s on 32 cores. This repo is only the thin module
-  layer.
+  OpenCV 5.0.0 from source (incl. NASM `.asm` SIMD, **runtime dispatch kept**)
+  directly, and pulls [`compat.ffmpeg`](https://github.com/mcpplibs/mcpp-index)
+  transitively for the videoio FFmpeg backend. This repo is only the thin
+  module layer.
 - **API and habits unchanged.** Every exported name is the upstream entity
   (`export using cv::…`): types, functions, enums and their enumerators.
 - **Constant macros re-homed.** `CV_8UC3`, `CV_PI`, `CV_MAKETYPE` … are macros
@@ -28,15 +29,18 @@ int main() {
   `cv::CV_8UC3`-style constexpr. TUs that also need the raw macro surface
   (`CV_Assert`, version macros) include
   [`<opencv-m/macros.hpp>`](include/opencv-m/macros.hpp) **before** importing.
-- **v0.1 scope** (the compat.opencv5 profile): core, imgproc, imgcodecs
-  (PNG + JPEG), highgui (headless), videoio (V4L2) + flann, geometry.
-  Linux-x86_64 first; dnn stays optional-future.
+- **Scope** (the compat.opencv profile): core, imgproc, imgcodecs
+  (PNG + JPEG), highgui (headless), videoio (V4L2 + **FFmpeg**) + flann,
+  geometry. Linux-x86_64 first. Optional extras (`dnn` deep-learning module,
+  `unifont` CJK text) already exist as `compat.opencv` **features**; the
+  module layer will forward them as `opencv` features (`import opencv.dnn;`)
+  once mcpp gains dep-feature forwarding (mcpp#243) — see Notes.
 
 ## Use
 
 ```toml
 [dependencies]
-opencv = "0.0.2"
+opencv = "0.0.3"
 ```
 
 Or start from the template: `mcpp new myvision --template imgproc`.
@@ -61,9 +65,9 @@ templates/  examples/ project template + runnable consumers
 ```
 
 Upstream sources are NOT vendored: they reach consumers through the
-`compat.opencv5` mcpp-index package (official GitHub tag tarball, GLOBAL + CN
+`compat.opencv` mcpp-index package (official GitHub tag tarball, GLOBAL + CN
 mirror, sha256-pinned). Its descriptor + generation pipeline live in
-mcpp-index (`tools/compat-opencv5/`). OpenCV bump: bump `compat.opencv5`
+mcpp-index (`tools/compat-opencv/`). OpenCV bump: bump `compat.opencv`
 there first, then update the pin in `tools/fetch_upstream.sh`, run
 `python3 tools/gen_exports.py && python3 tools/prune_loop.py`, review the
 export-list diffs.
@@ -91,5 +95,12 @@ export-list diffs.
   Mat/MatExpr delegation) + `src/matx_ops.inc` (v0.0.3: the full Matx/Vec
   algebra — 50 operators incl. matrix multiply, determinant/trace/norm).
   See `src/gen_exports/*.skipped.txt` for the rest.
+- **Optional features (compat level today, module level pending mcpp#243):**
+  `compat.opencv` ships `dnn` (deep-learning module — modules/dnn + vendored
+  protobuf + mlas) and `unifont` (Unicode/CJK `putText`) as opt-in features. A
+  power user can reach them today by depending on `compat.opencv` directly with
+  `features = ["dnn"]`. Exposing them through this module package as
+  `opencv = { features = ["dnn"] }` (so `import opencv.dnn;` pulls the dnn TUs
+  only when asked) needs dep-feature forwarding — tracked upstream as mcpp#243.
 - License: this wrapper repo is MIT; upstream OpenCV arrives via
-  `compat.opencv5` under **Apache-2.0**.
+  `compat.opencv` under **Apache-2.0**.

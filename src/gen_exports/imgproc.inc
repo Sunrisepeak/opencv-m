@@ -530,12 +530,10 @@ export namespace cv {
     using cv::grabCut;
     using cv::initInverseRectificationMap;
     using cv::initUndistortRectifyMap;
-    using cv::initWideAngleProjMap;
     using cv::integral;
     using cv::line;
     using cv::matchTemplate;
     using cv::medianBlur;
-    using cv::morphologyDefaultBorderValue;
     using cv::morphologyEx;
     using cv::phaseCorrelate;
     using cv::phaseCorrelateIterative;

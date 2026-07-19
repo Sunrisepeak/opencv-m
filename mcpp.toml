@@ -1,6 +1,6 @@
 [package]
 name        = "opencv"
-version     = "0.0.4"
+version     = "0.0.5"
 description = "C++23 module layer for OpenCV 5 — import opencv.cv; (API and habits unchanged, just no headers)"
 license     = "MIT"
 

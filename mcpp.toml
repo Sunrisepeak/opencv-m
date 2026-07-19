@@ -1,6 +1,6 @@
 [package]
 name        = "opencv"
-version     = "0.0.2"
+version     = "0.0.3"
 description = "C++23 module layer for OpenCV 5 — import opencv.cv; (API and habits unchanged, just no headers)"
 license     = "MIT"
 
@@ -9,7 +9,12 @@ sources      = ["src/**/*.cppm"]
 include_dirs = ["include"]
 
 [dependencies]
-compat.opencv5 = "5.0.0"
+# The full OpenCV 5.0.0 source build. compat.opencv is the unified descriptor
+# (mcpp-index #79): the from-source build the old compat.opencv5 alias carried,
+# now under its permanent name. Pulls compat.ffmpeg transitively for the videoio
+# FFmpeg backend. Optional features (unifont, dnn) are NOT forwarded here yet —
+# that needs mcpp#243 (dep-feature forwarding); see README.
+compat.opencv = "5.0.0"
 
 [dev-dependencies]
 compat.gtest = "1.15.2"

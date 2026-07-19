@@ -4,7 +4,7 @@ version     = "0.1.0"
 description = "OpenCV image pipeline ({{name}})"
 
 [dependencies]
-opencv = "0.0.2"
+opencv = "0.0.3"
 
 [targets.{{name}}]
 kind = "bin"

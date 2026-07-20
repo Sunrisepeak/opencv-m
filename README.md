@@ -1,122 +1,96 @@
-# opencv-m
+# opencv
 
-OpenCV 5 as C++23 named modules — the `import cv2` experience for C++:
+> OpenCV 5 的 C++23 模块化封装 — `import opencv.cv;` 即用 · 三平台全功能 · dnn/unifont 特性可插拔
+
+[![Release](https://img.shields.io/github/v/release/Sunrisepeak/opencv-m)](https://github.com/Sunrisepeak/opencv-m/releases)
+[![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
+[![Module](https://img.shields.io/badge/module-ok-green.svg)](https://en.cppreference.com/w/cpp/language/modules)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+| [mcpp 构建工具](https://github.com/mcpp-community/mcpp) · [包索引 mcpp-index](https://github.com/mcpp-community/mcpp-index) · [OpenCV 上游](https://github.com/opencv/opencv) · [Issues](https://github.com/Sunrisepeak/opencv-m/issues) · [Releases](https://github.com/Sunrisepeak/opencv-m/releases) |
+|:---:|
+| [![CI](https://github.com/Sunrisepeak/opencv-m/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sunrisepeak/opencv-m/actions/workflows/ci.yml) |
+
+## 核心特性
+
+- **纯模块导入** — `import opencv.cv;`,消费者代码零 `#include`,用的仍是你熟悉的 `cv::` API 与习惯
+- **从源码构建,消费端不跑 CMake** — [`compat.opencv`](https://github.com/mcpp-community/mcpp-index) 携带冻结配置快照 + 内嵌 `build.mcpp`,mcpp 直接编译整套 OpenCV 5.0.0(含 NASM SIMD,**运行时 dispatch 保留**),videoio 的 FFmpeg 后端由 `compat.ffmpeg` 透传闭合;本仓库只是薄薄的模块层
+- **三平台全功能** — Linux / macOS / Windows 三平台 CI;每个平台都带 imgcodecs(PNG+JPEG)与 videoio(FFmpeg `cap_ffmpeg`),可选 dnn 带各平台 SIMD(x86 AVX / arm NEON)
+- **特性可插拔** — `features = ["dnn"]` 解锁 `import opencv.dnn;` 深度学习模块;`unifont` 解锁 Unicode/CJK `putText`
+
+## 快速开始
+
+```bash
+mcpp new myvision --template opencv && cd myvision && mcpp run -- input.png    # 灰度管线骨架
+```
+
+或在已有项目中手动接入:
+
+```toml
+[dependencies]
+opencv = "0.0.6"
+```
 
 ```cpp
-import opencv.cv;   // or per-module: import opencv.core; import opencv.imgproc; …
+import opencv.cv;   // 或按模块:import opencv.core; import opencv.imgproc; …
 
 int main() {
     cv::Mat img = cv::imread("in.png", cv::IMREAD_COLOR);
     cv::Mat gray;
     cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
-    cv::imwrite("out.png", gray);
-    // … the exact same C++ API you already know — just no #include
+    cv::imwrite("out.png", gray);   // 还是你熟悉的 C++ API,只是不用 #include
+    return 0;
 }
 ```
 
-- **Source build, no CMake at build time.** The
-  [`compat.opencv`](https://github.com/mcpplibs/mcpp-index) index package
-  carries a frozen config snapshot + an embedded `build.mcpp` that synthesizes
-  OpenCV's build-time generated files on the consumer; mcpp compiles all of
-  OpenCV 5.0.0 from source (incl. NASM `.asm` SIMD, **runtime dispatch kept**)
-  directly, and pulls [`compat.ffmpeg`](https://github.com/mcpplibs/mcpp-index)
-  transitively for the videoio FFmpeg backend. This repo is only the thin
-  module layer.
-- **API and habits unchanged.** Every exported name is the upstream entity
-  (`export using cv::…`): types, functions, enums and their enumerators.
-- **Constant macros re-homed.** `CV_8UC3`, `CV_PI`, `CV_MAKETYPE` … are macros
-  upstream and cannot cross a module boundary; the module exports them as
-  `cv::CV_8UC3`-style constexpr. TUs that also need the raw macro surface
-  (`CV_Assert`, version macros) include
-  [`<opencv-m/macros.hpp>`](include/opencv-m/macros.hpp) **before** importing.
-- **Scope** (the compat.opencv profile): core, imgproc, imgcodecs
-  (PNG + JPEG), highgui (headless), videoio (V4L2 + **FFmpeg**) + flann,
-  geometry. Linux-x86_64 first. Optional **features** (mcpp >= 0.0.99):
-  `dnn` adds the `import opencv.dnn;` module interface and builds the
-  deep-learning module; `unifont` adds Unicode/CJK `putText` coverage. Enable
-  per-consumer: `opencv = { version = "0.0.4", features = ["dnn"] }` — see Notes.
+## 模块一览
 
-## Use
+| 模块 | 说明 |
+|---|---|
+| `opencv.cv` | umbrella 聚合,推荐默认入口 |
+| `opencv.core` | 核心:`Mat` / 类型 / 算术 / 运算符替换面 |
+| `opencv.imgproc` | 图像处理:滤波 / 几何变换 / 颜色空间 / 绘制 |
+| `opencv.imgcodecs` | 图像读写(PNG + JPEG) |
+| `opencv.videoio` | 视频 I/O(V4L2 + **FFmpeg** 后端,三平台) |
+| `opencv.highgui` | 高层 GUI(headless) |
+| `opencv.flann` / `opencv.geometry` | 依赖闭包模块 |
+| `opencv.dnn` | 深度学习(`dnn` 特性,见下) |
+
+每个 `opencv.<mod>` 是自包含 GMF,只导出自身表面、互不 `import`;`import opencv.cv;` 是推荐入口。常量宏(`CV_8UC3` / `CV_PI` / `CV_MAKETYPE` …)以 `cv::` constexpr 导出;需要原始宏拼写(`CV_Assert`、版本宏)的 TU,在 import 前 `#include <opencv-m/macros.hpp>`。
+
+## Features
+
+| Feature | 说明 |
+|---|---|
+| `dnn` | 深度学习模块:加 `import opencv.dnn;` 接口(`Net` / `blobFromImage` / `readNet` …)并构建底层 dnn(+ vendored protobuf/mlas)。三平台各自的 SIMD delta:Linux/Windows x86 AVX/AVX2/AVX512,macOS-arm64 NEON |
+| `unifont` | Unicode/CJK `putText` 覆盖 —— 纯 forward,内嵌 WenQuanYi Micro Hei 字体,`FontFace("uni")` 渲染 |
 
 ```toml
 [dependencies]
-opencv = "0.0.3"
+opencv = { version = "0.0.6", features = ["dnn"] }
 ```
 
-Or start from the template: `mcpp new myvision --template imgproc`.
-Examples: [`examples/probe`](examples/probe) (no input needed),
-[`examples/gray_pipeline`](examples/gray_pipeline).
+按需构建(dnn 底层多 300+ TU,只给显式开启的消费者);`dnn` 默认不进 `opencv.cv` umbrella。需 mcpp ≥ 0.0.101(per-OS features)。
 
-Validate the package: `mcpp build && mcpp test` (API surface, macros-mix TU,
-PNG/JPEG roundtrips).
+## 示例
 
-## Layout
+| 示例 | 内容 |
+|---|---|
+| [`examples/probe`](examples/probe) | 版本 / 构建信息(无需输入) |
+| [`examples/gray_pipeline`](examples/gray_pipeline) | 读图 → 灰度 → 写图的最小管线 |
+| [`examples/workspace`](examples/workspace) | 多成员 workspace 示例 |
 
-```text
-src/*.cppm            module layer (self-contained GMF + export using);
-                      opencv.cv = umbrella, opencv = lib root
-src/gen_exports/      generated export lists + skip reports
-include/opencv-m/     optional macros side header
-tools/                fetch_upstream.sh (pinned official tarball),
-                      gen_exports.py (hdr_parser.py-driven surface +
-                      tools/curated/ whitelists), prune_loop.py
-                      (compile-verify + prune)
-templates/  examples/ project template + runnable consumers
+```bash
+cd examples/gray_pipeline && mcpp run -- input.png
 ```
 
-Upstream sources are NOT vendored: they reach consumers through the
-`compat.opencv` mcpp-index package (official GitHub tag tarball, GLOBAL + CN
-mirror, sha256-pinned). Its descriptor + generation pipeline live in
-mcpp-index (`tools/compat-opencv/`). OpenCV bump: bump `compat.opencv`
-there first, then update the pin in `tools/fetch_upstream.sh`, run
-`python3 tools/gen_exports.py && python3 tools/prune_loop.py`, review the
-export-list diffs.
+## 工具链与运行时
 
-## Notes
+包不固定工具链(mcpp 解析环境默认)。上游 OpenCV 源码**不 vendored**,经 `compat.opencv` 索引包(官方 GitHub tag tarball,GLOBAL + CN 镜像,sha256 锁定)到达消费端;描述符与生成流水线在 mcpp-index(`tools/compat-opencv/`)。运算符与命名自由函数的 `static inline` 表面无法跨模块边界(clang 直接拒绝 `export` internal-linkage 的 using-declaration,gcc 只是宽容),已由 `src/core_ops.inc`(saturate_cast、Point/Size/Rect/Range/Scalar、Mat/MatExpr)+ `src/matx_ops.inc`(Matx/Vec 代数)+ `src/core_fns.inc`(static-inline 命名函数)替换 —— 这正是 `import opencv.cv;` 能在 clang(macOS/Windows)与 gcc 上都编译的原因。
 
-- **Module design:** each opencv.\<mod\> is a self-contained GMF (textual
-  OpenCV headers) exporting only its own surface; modules do NOT import each
-  other (gcc 16 merges textual+imported global-module entities with
-  `conflicting default argument` errors otherwise). `import opencv.cv;` is the
-  supported entry; importing a single module gives that module's names only.
-- **Mixed TUs** (textual `#include <opencv2/…>` BEFORE the import): fully
-  supported since v0.0.3 for the whole operator surface — the replacement
-  operators are constrained templates that resolve deterministically in
-  both pure-import and mixed TUs (see `src/core_ops.inc` header comment).
-  One compiler-side limit remains: `<opencv2/core.hpp>` itself cannot be
-  textually mixed with the import on gcc 16 (its default-argument
-  redeclarations trip `conflicting default argument` during global-module
-  merge — include `types.hpp`/`mat.hpp`-level headers instead, or use the
-  macros side header).
-- The export surface = hdr_parser (python-wrapper annotations) + curated
-  whitelists, compile-verified. Upstream's internal-linkage operator/helper
-  surface cannot cross the module boundary (clang rejects `export`ing an
-  internal-linkage using-declaration outright; gcc is merely lenient), so it
-  is REPLACED:
-  `src/core_ops.inc` (saturate_cast, Point/Size/Rect/Range/Scalar/Complex,
-  Mat/MatExpr delegation) + `src/matx_ops.inc` (v0.0.3: the full Matx/Vec
-  algebra — 50 operators incl. matrix multiply, determinant/trace/norm) +
-  `src/core_fns.inc` (v0.0.6: the static-inline NAMED free functions —
-  align*/`*Up`/getElemSize/cubeRoot/makePtr/to{Lower,Upper}Case, and the
-  abs/max/min/norm/determinant/trace/swap/parallel_for_/format/print/randu/
-  read/write families, self-contained reimpls for the static-inline overloads
-  + fn-pointer forwards for the CV_EXPORTS ones). This is what makes
-  `import opencv.cv;` compile on clang (macOS/Windows) as well as gcc.
-  See `src/gen_exports/*.skipped.txt` for the rest.
-- **Optional features (`[features]`, mcpp >= 0.0.99 dep/feat forwarding):**
-  `dnn = { version = "0.0.4", features = ["dnn"] }` compiles `src/dnn.cppm`
-  (the `import opencv.dnn;` interface — `Net`, `blobFromImage`, `readNet`, …)
-  and forwards `compat.opencv/dnn` so the underlying library is built with the
-  deep-learning module (+309 TUs: modules/dnn + vendored protobuf + mlas) —
-  only for consumers who ask. `unifont` is a pure forward (no new surface): it
-  builds `compat.opencv` with the WenQuanYi Micro Hei font so the `"uni"`
-  `FontFace` renders CJK. `dnn` stays out of the `opencv.cv` umbrella by design.
-  <details><summary>compat level (advanced)</summary>
-  These simply forward the same-named `compat.opencv` features, so a consumer
-  that depends on `compat.opencv` directly can also enable them there with
-  `compat.opencv = { version = "5.0.0", features = ["dnn"] }` — the module
-  package's features are the ergonomic front for that. Forwarding uses mcpp's
-  `dep/feat` mechanism (mcpp#243, mcpp >= 0.0.99).
-  </details>
-- License: this wrapper repo is MIT; upstream OpenCV arrives via
-  `compat.opencv` under **Apache-2.0**.
+> [!NOTE]
+> 早期版本,接口可能调整。问题与想法欢迎提 [issue](https://github.com/Sunrisepeak/opencv-m/issues)。
+
+## License
+
+封装代码 MIT;OpenCV 本体经 `compat.opencv` 提供,**Apache-2.0**。

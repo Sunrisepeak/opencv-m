@@ -15,7 +15,7 @@
 
 - **纯模块导入** — `import opencv.cv;`,消费者代码零 `#include`,用的仍是你熟悉的 `cv::` API 与习惯
 - **从源码构建,消费端不跑 CMake** — [`compat.opencv`](https://github.com/mcpp-community/mcpp-index) 携带冻结配置快照 + 内嵌 `build.mcpp`,mcpp 直接编译整套 OpenCV 5.0.0(含 NASM SIMD,**运行时 dispatch 保留**),videoio 的 FFmpeg 后端由 `compat.ffmpeg` 透传闭合;本仓库只是薄薄的模块层
-- **三平台全功能** — Linux / macOS / Windows 三平台 CI;每个平台都带 imgcodecs(PNG+JPEG)与 videoio(FFmpeg `cap_ffmpeg`),可选 dnn 带各平台 SIMD(x86 AVX / arm NEON)
+- **三平台全功能** — Linux / macOS / Windows 三平台 CI,每个平台都带 imgcodecs(PNG+JPEG)与 videoio(FFmpeg `cap_ffmpeg`);可选 dnn 在 **Linux / macOS** 带 per-OS SIMD(x86 AVX / arm NEON)
 - **特性可插拔** — `features = ["dnn"]` 解锁 `import opencv.dnn;` 深度学习模块;`unifont` 解锁 Unicode/CJK `putText`
 
 ## 快速开始
@@ -62,7 +62,7 @@ int main() {
 
 | Feature | 说明 |
 |---|---|
-| `dnn` | 深度学习模块:加 `import opencv.dnn;` 接口(`Net` / `blobFromImage` / `readNet` …)并构建底层 dnn(+ vendored protobuf/mlas)。三平台各自的 SIMD delta:Linux/Windows x86 AVX/AVX2/AVX512,macOS-arm64 NEON |
+| `dnn` | 深度学习模块:加 `import opencv.dnn;` 接口(`Net` / `blobFromImage` / `readNet` …)并构建底层 dnn(+ vendored protobuf/mlas)。**目前 Linux / macOS**(per-OS 特性,mcpp#253):Linux x86 AVX/AVX2/AVX512、macOS-arm64 NEON。Windows 暂不支持 dnn —— mlas 的 x86 汇编是 GAS/ELF(`.type …,@function`),clang-cl 无法汇编成 Windows COFF(待适配 MASM `amd64/*.asm` 或纯 C++ mlas)|
 | `unifont` | Unicode/CJK `putText` 覆盖 —— 纯 forward,内嵌 WenQuanYi Micro Hei 字体,`FontFace("uni")` 渲染 |
 
 ```toml

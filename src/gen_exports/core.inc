@@ -301,12 +301,9 @@ export namespace cv {
     using cv::_InputOutputArray;
     using cv::_OutputArray;
     using cv::__UMAT_USAGE_FLAGS_32BIT;
-    using cv::abs;
     using cv::absdiff;
     using cv::add;
     using cv::addWeighted;
-    using cv::alignPtr;
-    using cv::alignSize;
     using cv::batchDistance;
     using cv::bitwise_and;
     using cv::bitwise_not;
@@ -326,15 +323,12 @@ export namespace cv {
     using cv::copyTo;
     using cv::cos;
     using cv::countNonZero;
-    using cv::cubeRoot;
     using cv::cv_abs;
     using cv::cv_absdiff;
     using cv::dct;
     using cv::depthToString;
-    using cv::determinant;
     using cv::dft;
     using cv::divSpectrums;
-    using cv::divUp;
     using cv::divide;
     using cv::eigen;
     using cv::eigenNonSymmetric;
@@ -348,13 +342,11 @@ export namespace cv {
     using cv::finiteMask;
     using cv::flip;
     using cv::flipND;
-    using cv::format;
     using cv::gemm;
     using cv::getBuildInformation;
     using cv::getCPUFeaturesLine;
     using cv::getCPUTickCount;
     using cv::getDefaultAlgorithmHint;
-    using cv::getElemSize;
     using cv::getHardwareFeatureName;
     using cv::getNumThreads;
     using cv::getNumberOfCPUs;
@@ -378,12 +370,9 @@ export namespace cv {
     using cv::layoutToString;
     using cv::log;
     using cv::magnitude;
-    using cv::makePtr;
-    using cv::max;
     using cv::mean;
     using cv::meanStdDev;
     using cv::merge;
-    using cv::min;
     using cv::minMaxIdx;
     using cv::minMaxLoc;
     using cv::mixChannels;
@@ -392,20 +381,15 @@ export namespace cv {
     using cv::mulTransposed;
     using cv::multiply;
     using cv::noArray;
-    using cv::norm;
     using cv::normalize;
-    using cv::parallel_for_;
     using cv::patchNaNs;
     using cv::perspectiveTransform;
     using cv::phase;
     using cv::polarToCart;
     using cv::pow;
     using cv::pprint;
-    using cv::print;
     using cv::randShuffle;
     using cv::randn;
-    using cv::randu;
-    using cv::read;
     using cv::rectangleIntersectionArea;
     using cv::redirectError;
     using cv::reduce;
@@ -413,7 +397,6 @@ export namespace cv {
     using cv::reduceArgMin;
     using cv::repeat;
     using cv::rotate;
-    using cv::roundUp;
     using cv::scaleAdd;
     using cv::setBreakOnError;
     using cv::setIdentity;
@@ -433,19 +416,14 @@ export namespace cv {
     using cv::sqrt;
     using cv::subtract;
     using cv::sum;
-    using cv::swap;
     using cv::tempfile;
     using cv::theRNG;
-    using cv::toLowerCase;
-    using cv::toUpperCase;
-    using cv::trace;
     using cv::transform;
     using cv::transpose;
     using cv::transposeND;
     using cv::typeToString;
     using cv::useOptimized;
     using cv::vconcat;
-    using cv::write;
     using cv::writeScalar;
 }
 export namespace cv::cuda {
@@ -456,8 +434,6 @@ export namespace cv::cuda {
     using cv::cuda::Stream;
 }
 export namespace cv::details {
-    using cv::details::char_tolower;
-    using cv::details::char_toupper;
 }
 export namespace cv::ipp {
     using cv::ipp::getIppErrorLocation;
@@ -466,10 +442,8 @@ export namespace cv::ipp {
     using cv::ipp::getIppVersion;
     using cv::ipp::setIppStatus;
     using cv::ipp::setUseIPP;
-    using cv::ipp::setUseIPP_NE;
     using cv::ipp::setUseIPP_NotExact;
     using cv::ipp::useIPP;
-    using cv::ipp::useIPP_NE;
     using cv::ipp::useIPP_NotExact;
 }
 export namespace cv::ocl {

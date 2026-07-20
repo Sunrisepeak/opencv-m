@@ -73,3 +73,36 @@ ogl::mapGLBuffer   # 'mapGLBuffer' has not been declared in 'cv::ogl'
 ogl::render   # 'render' has not been declared in 'cv::ogl'
 ogl::unmapGLBuffer   # 'unmapGLBuffer' has not been declared in 'cv::ogl'
 ogl::ocl::initializeContextFromGL   # 'initializeContextFromGL' has not been declared in 'cv::ogl::ocl'
+
+# ── v0.0.6: static-inline / internal-linkage free functions (clang cannot
+#    `export using` an internal-linkage using-declaration). Replaced by the
+#    forwarding + self-contained-reimpl layer in src/core_fns.inc (companion
+#    of core_ops.inc / matx_ops.inc). See core_fns.inc header for the exact
+#    reimpl-vs-forward decision per name.
+abs   # static-inline overloads (int/Complex/Mat_) in the set → core_fns.inc
+alignPtr   # static inline utility.hpp → core_fns.inc
+alignSize   # static inline utility.hpp → core_fns.inc
+cubeRoot   # static-inline double overload in the set → core_fns.inc
+determinant   # static-inline Matx overload in the set → matx_ops.inc + core_fns.inc
+divUp   # static inline utility.hpp → core_fns.inc
+format   # static-inline Mat/Formatter overload in the set → core_fns.inc
+getElemSize   # static inline utility.hpp → core_fns.inc
+makePtr   # static inline cvstd_wrapper.hpp → core_fns.inc
+max   # static-inline Mat×Matx / Mat_ overloads in the set → core_fns.inc
+min   # static-inline Mat×Matx / Mat_ overloads in the set → core_fns.inc
+norm   # static-inline Matx/Point overloads in the set → matx_ops.inc + core_fns.inc
+parallel_for_   # static-inline std::function overload in the set → core_fns.inc
+print   # static inline operations.hpp → core_fns.inc
+randu   # static-inline randu<_Tp>() in the set → core_fns.inc
+read   # FileStorage primitives forwarded in core_fns.inc; geometry-type convenience wrappers pruned (see below)
+roundUp   # static inline utility.hpp → core_fns.inc
+swap   # static-inline MatExpr overload in the set → core_fns.inc
+toLowerCase   # static inline cvstd.hpp → core_fns.inc
+toUpperCase   # static inline cvstd.hpp → core_fns.inc
+trace   # static-inline Matx overload in the set → matx_ops.inc + core_fns.inc
+write   # FileStorage primitives forwarded in core_fns.inc; geometry-type convenience wrappers pruned (see below)
+# internal helpers, NOT user API — dropped outright (no replacement):
+details::char_tolower   # internal cvstd.hpp helper behind toLowerCase
+details::char_toupper   # internal cvstd.hpp helper behind toUpperCase
+ipp::setUseIPP_NE   # internal IPP not-exact toggle
+ipp::useIPP_NE   # internal IPP not-exact query

@@ -4,6 +4,8 @@
 // …) cannot cross a module boundary — include <opencv-m/macros.hpp> BEFORE
 // importing when you need them.
 module;
+#include <cstdarg>   // va_list/va_start/va_copy/va_end — cv::format printf reimpl (core_fns.inc)
+#include <cstdio>    // vsnprintf/fputs/FILE/stdout — cv::format / cv::print reimpls (core_fns.inc)
 #include <opencv2/core.hpp>
 #include <opencv2/core/async.hpp>
 #include <opencv2/core/affine.hpp>
@@ -18,6 +20,7 @@ export module opencv.core;
 #include "gen_exports/core.inc"
 #include "core_ops.inc"
 #include "matx_ops.inc"
+#include "core_fns.inc"
 
 // ── constant macros re-homed as cv:: constexpr (original spellings) ──────
 // CV_8U / CV_8UC3 / CV_PI … are object-like macros upstream; a module cannot

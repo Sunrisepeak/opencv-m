@@ -187,11 +187,20 @@ inline Range operator&(const _Rg& a, const Range& b)
     if (r.end < r.start) r.end = r.start;
     return r;
 }
-template<class _Rg> requires __is_same(_Rg, Range)
+// NOTE: these three mix a deduced `_Rg` with a hard-coded scalar (`int`)
+// parameter. Under clang, a trailing requires-clause is checked AFTER the
+// signature is substituted, so an ADL probe that deduces `_Rg=int` (e.g.
+// `int + <cv-scoped enum>` inside cv headers) makes clang form the invalid
+// operator `operator+(const int&, int)` and hard-error ("overloaded operator
+// must have at least one class/enum parameter") before the constraint can
+// exclude it. Moving the Range gate into a defaulted enable_if template
+// parameter makes the substitution fail earlier (SFINAE), so the invalid
+// specialization is never formed. gcc accepts both forms identically.
+template<class _Rg, std::enable_if_t<__is_same(_Rg, Range), int> = 0>
 inline Range operator+(const _Rg& r, int delta) { return Range(r.start + delta, r.end + delta); }
-template<class _Rg> requires __is_same(_Rg, Range)
+template<class _Rg, std::enable_if_t<__is_same(_Rg, Range), int> = 0>
 inline Range operator+(int delta, const _Rg& r) { return Range(r.start + delta, r.end + delta); }
-template<class _Rg> requires __is_same(_Rg, Range)
+template<class _Rg, std::enable_if_t<__is_same(_Rg, Range), int> = 0>
 inline Range operator-(const _Rg& r, int delta) { return Range(r.start - delta, r.end - delta); }
 
 

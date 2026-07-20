@@ -90,10 +90,18 @@ export-list diffs.
   macros side header).
 - The export surface = hdr_parser (python-wrapper annotations) + curated
   whitelists, compile-verified. Upstream's internal-linkage operator/helper
-  surface cannot cross the module boundary, so it is REPLACED:
+  surface cannot cross the module boundary (clang rejects `export`ing an
+  internal-linkage using-declaration outright; gcc is merely lenient), so it
+  is REPLACED:
   `src/core_ops.inc` (saturate_cast, Point/Size/Rect/Range/Scalar/Complex,
   Mat/MatExpr delegation) + `src/matx_ops.inc` (v0.0.3: the full Matx/Vec
-  algebra — 50 operators incl. matrix multiply, determinant/trace/norm).
+  algebra — 50 operators incl. matrix multiply, determinant/trace/norm) +
+  `src/core_fns.inc` (v0.0.6: the static-inline NAMED free functions —
+  align*/`*Up`/getElemSize/cubeRoot/makePtr/to{Lower,Upper}Case, and the
+  abs/max/min/norm/determinant/trace/swap/parallel_for_/format/print/randu/
+  read/write families, self-contained reimpls for the static-inline overloads
+  + fn-pointer forwards for the CV_EXPORTS ones). This is what makes
+  `import opencv.cv;` compile on clang (macOS/Windows) as well as gcc.
   See `src/gen_exports/*.skipped.txt` for the rest.
 - **Optional features (`[features]`, mcpp >= 0.0.99 dep/feat forwarding):**
   `dnn = { version = "0.0.4", features = ["dnn"] }` compiles `src/dnn.cppm`

@@ -169,8 +169,12 @@ odd-name: cv.void error
 odd-name: cv.void terminate
 pruned (compile-verify): cv::BlockedRange
 pruned (compile-verify): cv::Split
+pruned (compile-verify): cv::abs
+pruned (compile-verify): cv::alignPtr
+pruned (compile-verify): cv::alignSize
 pruned (compile-verify): cv::allocSingletonBuffer
 pruned (compile-verify): cv::allocSingletonNewBuffer
+pruned (compile-verify): cv::cubeRoot
 pruned (compile-verify): cv::cuda::BufferPool
 pruned (compile-verify): cv::cuda::DYNAMIC_PARALLELISM
 pruned (compile-verify): cv::cuda::DeviceInfo
@@ -215,9 +219,21 @@ pruned (compile-verify): cv::cuda::syncOutput
 pruned (compile-verify): cv::cuda::unregisterPageLocked
 pruned (compile-verify): cv::cuda::wrapStream
 pruned (compile-verify): cv::currentParallelFramework
+pruned (compile-verify): cv::details::char_tolower
+pruned (compile-verify): cv::details::char_toupper
+pruned (compile-verify): cv::determinant
+pruned (compile-verify): cv::divUp
 pruned (compile-verify): cv::double
 pruned (compile-verify): cv::float
+pruned (compile-verify): cv::format
+pruned (compile-verify): cv::getElemSize
 pruned (compile-verify): cv::int
+pruned (compile-verify): cv::ipp::setUseIPP_NE
+pruned (compile-verify): cv::ipp::useIPP_NE
+pruned (compile-verify): cv::makePtr
+pruned (compile-verify): cv::max
+pruned (compile-verify): cv::min
+pruned (compile-verify): cv::norm
 pruned (compile-verify): cv::ogl::LINES
 pruned (compile-verify): cv::ogl::LINE_LOOP
 pruned (compile-verify): cv::ogl::LINE_STRIP
@@ -235,12 +251,22 @@ pruned (compile-verify): cv::ogl::mapGLBuffer
 pruned (compile-verify): cv::ogl::ocl::initializeContextFromGL
 pruned (compile-verify): cv::ogl::render
 pruned (compile-verify): cv::ogl::unmapGLBuffer
+pruned (compile-verify): cv::parallel_for_
+pruned (compile-verify): cv::print
+pruned (compile-verify): cv::randu
+pruned (compile-verify): cv::read
+pruned (compile-verify): cv::roundUp
 pruned (compile-verify): cv::scalarToRawData
 pruned (compile-verify): cv::schar
 pruned (compile-verify): cv::short
+pruned (compile-verify): cv::swap
+pruned (compile-verify): cv::toLowerCase
+pruned (compile-verify): cv::toUpperCase
+pruned (compile-verify): cv::trace
 pruned (compile-verify): cv::uchar
 pruned (compile-verify): cv::unsigned
 pruned (compile-verify): cv::ushort
+pruned (compile-verify): cv::write
 skipped-ns: cv.detail.TEST_CUSTOM
 skipped-ns: cv.detail.TEST_EQ
 skipped-ns: cv.detail.TEST_GE

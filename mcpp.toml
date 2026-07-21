@@ -1,14 +1,33 @@
 [package]
 name        = "opencv"
-version     = "0.0.6"
-description = "C++23 module layer for OpenCV 5 — import opencv.cv; (API and habits unchanged, just no headers)"
+version     = "0.0.7"
+description = "OpenCV 5.0.0 vendored + C++23 module layer — import opencv.cv; (API and habits unchanged, just no headers). Single repo: full source build carried by this manifest, frozen per-OS config snapshots in gen/, no compat.opencv dependency."
 license     = "MIT"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Single-repo build (ported from mcpp-index pkgs/c/compat.opencv.lua @8692bb26,
+# see .agents/docs/2026-07-21-vendor-single-repo-plan.md):
+#   third_party/opencv-5.0.0/  pinned upstream source (zero patches)
+#   gen/common, gen/<os>/      frozen config snapshots as real files
+#   build.mcpp                 per-OS include dirs + per-OS dnn sources
+#                              (gen/<os>/DNN_SOURCES.txt) + unifont embed
+# Per-glob defines below scope __OPENCV_BUILD-family flags to third_party/**
+# and gen/** TUs — src/*.cppm module-layer TUs never see them.
+#
+# The [[build.flags]] table = UNION of the linux+macosx snapshots (identical
+# or disjoint globs; arch-specific per-glob defines hoisted to per-OS cflags,
+# each name grep-verified to be read only by its own group) + the WINDOWS
+# tables keyed on gen/windows/tu/w*/ stub paths: every windows TU is a
+# one-line include stub, so its per-glob flags live on windows-only paths —
+# the in-grammar workaround for the missing [target.'cfg(os)'] per-glob
+# flags (mcpp-community/mcpp#258; drop the stub layer when it lands).
+# ─────────────────────────────────────────────────────────────────────────────
+
 [build]
-# The default surface (opencv.cv umbrella + per-module interfaces). dnn.cppm is
-# NOT listed here on purpose: it needs <opencv2/dnn.hpp>, which only exists when
-# the underlying library is built with its dnn module — so it is added by the
-# `dnn` feature below, and `import opencv.dnn;` fails (correctly) without it.
+# Module-layer surface (opencv.cv umbrella + per-module interfaces). dnn.cppm
+# is NOT listed here on purpose: it needs <opencv2/dnn.hpp> compiled in, so the
+# dnn feature adds it and import opencv.dnn; fails (correctly) without it.
+# The OpenCV library TUs are per-OS -> [target.'cfg(<os>)'.build].sources.
 sources = [
     "src/opencv.cppm",
     "src/cv.cppm",
@@ -20,31 +39,1411 @@ sources = [
     "src/flann.cppm",
     "src/geometry.cppm",
 ]
-include_dirs = ["include"]
+# Public include dirs (propagate to consumers): the module layer's include/,
+# gen/common (opencv2/opencv_modules.hpp — the ONE consumer-visible generated
+# header) and the vendored OpenCV trees. The per-OS gen/<os> snapshot dirs are
+# PRIVATE and emitted by build.mcpp (gen/<os>/INCLUDE_DIRS.txt).
+include_dirs = [
+        "include",
+        "gen/common",
+        "third_party/opencv-5.0.0",
+        "third_party/opencv-5.0.0/3rdparty/dlpack/include",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/src",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/nasm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64",
+        "third_party/opencv-5.0.0/3rdparty/zlib",
+        "third_party/opencv-5.0.0/modules/core/include",
+        "third_party/opencv-5.0.0/modules/flann/include",
+        "third_party/opencv-5.0.0/modules/geometry/include",
+        "third_party/opencv-5.0.0/modules/imgproc/include",
+        "third_party/opencv-5.0.0/3rdparty/mlas/inc",
+        "third_party/opencv-5.0.0/3rdparty/mlas/lib",
+        "third_party/opencv-5.0.0/modules/dnn/include",
+        "third_party/opencv-5.0.0/modules/dnn/misc/caffe",
+        "third_party/opencv-5.0.0/modules/dnn/misc/tensorflow",
+        "third_party/opencv-5.0.0/modules/dnn/misc/onnx",
+        "third_party/opencv-5.0.0/modules/dnn/misc/tflite",
+        "third_party/opencv-5.0.0/3rdparty/flatbuffers/include",
+        "third_party/opencv-5.0.0/3rdparty/protobuf/src",
+        "third_party/opencv-5.0.0/3rdparty/libpng",
+        "third_party/opencv-5.0.0/modules/imgcodecs/include",
+        "third_party/opencv-5.0.0/modules/videoio/include",
+        "third_party/opencv-5.0.0/modules/highgui/include",
+    ]
+
+[[build.flags]]
+glob = "**/modules/core/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "HAVE_UNISTD_H=1",
+    "NDEBUG",
+    "_USE_MATH_DEFINES",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "**/modules/flann/**"
+defines = [
+    "NDEBUG",
+    "_USE_MATH_DEFINES",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "**/modules/geometry/**"
+defines = [
+    "NDEBUG",
+    "_USE_MATH_DEFINES",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "**/modules/highgui/**"
+defines = [
+    "ENABLE_PLUGINS",
+    "NDEBUG",
+    "_USE_MATH_DEFINES",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "**/modules/imgcodecs/**"
+defines = [
+    "HAVE_IMGCODEC_HDR",
+    "HAVE_IMGCODEC_PFM",
+    "HAVE_IMGCODEC_PXM",
+    "HAVE_IMGCODEC_SUNRASTER",
+    "HAVE_STDARG_H=1",
+    "HAVE_UNISTD_H=1",
+    "NDEBUG",
+    "_USE_MATH_DEFINES",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "**/modules/imgproc/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "HAVE_UNISTD_H=1",
+    "NDEBUG",
+    "_USE_MATH_DEFINES",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "**/3rdparty/libjpeg-turbo/**"
+defines = [
+    "NDEBUG",
+    "NO_GETENV",
+    "NO_PUTENV",
+]
+
+[[build.flags]]
+glob = "**/tu/jpeg12/**"
+defines = [
+    "BITS_IN_JSAMPLE=12",
+    "NDEBUG",
+    "NO_GETENV",
+    "NO_PUTENV",
+]
+
+[[build.flags]]
+glob = "**/tu/jpeg16/**"
+defines = [
+    "BITS_IN_JSAMPLE=16",
+    "NDEBUG",
+    "NO_GETENV",
+    "NO_PUTENV",
+]
+
+[[build.flags]]
+glob = "**/3rdparty/libpng/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "HAVE_UNISTD_H=1",
+    "NDEBUG",
+]
+
+[[build.flags]]
+glob = "**/modules/videoio/**"
+defines = [
+    "ENABLE_PLUGINS",
+    "HAVE_FFMPEG",
+    "HAVE_FFMPEG_LIBAVDEVICE",
+    "NDEBUG",
+    "_USE_MATH_DEFINES",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "**/3rdparty/zlib/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "HAVE_UNISTD_H=1",
+    "NDEBUG",
+]
+
+[[build.flags]]
+glob = "third_party/opencv-5.0.0/**/*.asm"
+defines = [
+    "ELF",
+    "NO_GETENV",
+    "NO_PUTENV",
+    "PIC",
+    "__CET__",
+    "__x86_64__",
+]
+
+[[build.flags]]
+glob = "**/modules/core/**/*.avx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX",
+]
+
+[[build.flags]]
+glob = "**/modules/core/**/*.avx2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX2",
+]
+
+[[build.flags]]
+glob = "**/modules/core/**/*.avx512_skx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+    "-mavx512f",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512vl",
+    "-mavx512bw",
+    "-mavx512dq",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX512_COMMON=1",
+    "CV_CPU_COMPILE_AVX512_SKX=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_AVX_512F=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
+]
+
+[[build.flags]]
+glob = "**/modules/core/**/*.sse4_1.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+]
+defines = [
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_1",
+]
+
+[[build.flags]]
+glob = "**/modules/core/**/*.sse4_2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+]
+defines = [
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_2",
+]
+
+[[build.flags]]
+glob = "**/modules/imgproc/**/*.avx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX",
+]
+
+[[build.flags]]
+glob = "**/modules/imgproc/**/*.avx2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX2",
+]
+
+[[build.flags]]
+glob = "**/modules/imgproc/**/*.avx512_skx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+    "-mavx512f",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512vl",
+    "-mavx512bw",
+    "-mavx512dq",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX512_COMMON=1",
+    "CV_CPU_COMPILE_AVX512_SKX=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_AVX_512F=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
+]
+
+[[build.flags]]
+glob = "**/modules/imgproc/**/*.sse4_1.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+]
+defines = [
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_1",
+]
+
+[[build.flags]]
+glob = "third_party/opencv-5.0.0/modules/core/src/alloc.cpp"
+defines = [
+    "HAVE_POSIX_MEMALIGN=1",
+]
+
+[[build.flags]]
+glob = "third_party/opencv-5.0.0/modules/core/src/parallel/parallel.cpp"
+defines = [
+    "PARALLEL_ENABLE_PLUGINS=1",
+]
+
+[[build.flags]]
+glob = "third_party/opencv-5.0.0/modules/core/src/system.cpp"
+defines = [
+    "HAVE_GETAUXVAL=1",
+]
+
+[[build.flags]]
+glob = "gen/common/modules/core/transpose.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[build.flags]]
+glob = "gen/common/modules/imgproc/warp_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/core/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "NDEBUG",
+    "OPENCV_ALLOCATOR_STATS_COUNTER_TYPE=long long",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/flann/**"
+defines = [
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/geometry/**"
+defines = [
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/highgui/**"
+defines = [
+    "ENABLE_PLUGINS",
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/imgcodecs/**"
+defines = [
+    "HAVE_IMGCODEC_HDR",
+    "HAVE_IMGCODEC_PFM",
+    "HAVE_IMGCODEC_PXM",
+    "HAVE_IMGCODEC_SUNRASTER",
+    "HAVE_STDARG_H=1",
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/imgproc/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/libjpeg-turbo/**"
+defines = [
+    "NDEBUG",
+    "NO_GETENV",
+    "NO_PUTENV",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/jpeg12/**"
+defines = [
+    "BITS_IN_JSAMPLE=12",
+    "NDEBUG",
+    "NO_GETENV",
+    "NO_PUTENV",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/jpeg16/**"
+defines = [
+    "BITS_IN_JSAMPLE=16",
+    "NDEBUG",
+    "NO_GETENV",
+    "NO_PUTENV",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/libpng/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "NDEBUG",
+    "PNG_INTEL_SSE_OPT=1",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/videoio/**"
+defines = [
+    "ENABLE_PLUGINS",
+    "HAVE_FFMPEG",
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/zlib/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "NDEBUG",
+    "NO_FSEEKO",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/core/**/*.avx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/core/**/*.avx2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX2",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/core/**/*.avx512_skx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+    "-mavx512f",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512vl",
+    "-mavx512bw",
+    "-mavx512dq",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX512_COMMON=1",
+    "CV_CPU_COMPILE_AVX512_SKX=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_AVX_512F=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/core/**/*.sse4_1.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+]
+defines = [
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_1",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/core/**/*.sse4_2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+]
+defines = [
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_2",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/imgproc/**/*.avx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/imgproc/**/*.avx2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX2",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/imgproc/**/*.avx512_skx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+    "-mavx512f",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512vl",
+    "-mavx512bw",
+    "-mavx512dq",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX512_COMMON=1",
+    "CV_CPU_COMPILE_AVX512_SKX=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_AVX_512F=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/imgproc/**/*.sse4_1.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+]
+defines = [
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_1",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/core/third_party_opencv-5.0.0_modules_core_src_alloc.cpp"
+defines = [
+    "HAVE_MALLOC_H=1",
+    "HAVE_WIN32_ALIGNED_MALLOC=1",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/core/third_party_opencv-5.0.0_modules_core_src_parallel_parallel.cpp"
+defines = [
+    "DEBUG_POSTFIX=d",
+    "PARALLEL_ENABLE_PLUGINS=1",
+]
+
+[[build.flags]]
+glob = "gen/windows/tu/w/videoio/third_party_opencv-5.0.0_modules_videoio_src_backend_plugin.cpp"
+defines = [
+    "DEBUG_POSTFIX=d",
+]
+
+[target.'cfg(linux)'.build]
+cflags   = [
+    "-msse3",
+    "-w",
+    "-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=long long",
+    "-DPNG_INTEL_SSE_OPT=1",
+    "-DHAVE_CAMV4L2",
+    "-DHAVE_MALLOC_H=1",
+    "-DHAVE_MEMALIGN=1",
+    "-DHAVE_FLATBUFFERS=1",
+]
+cxxflags = [
+    "-msse3",
+    "-w",
+    "-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=long long",
+    "-DPNG_INTEL_SSE_OPT=1",
+    "-DHAVE_CAMV4L2",
+    "-DHAVE_MALLOC_H=1",
+    "-DHAVE_MEMALIGN=1",
+    "-DHAVE_FLATBUFFERS=1",
+]
+ldflags  = [
+    "-lpthread",
+    "-ldl",
+]
+sources  = [
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jsimd.c",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/src/{jaricom,jcapimin,jcapistd,jcarith,jccoefct,jccolor,jcdctmgr,jcdiffct,jchuff,jcicc,jcinit,jclhuff,jclossls,jcmainct,jcmarker,jcmaster,jcomapi,jcparam,jcphuff,jcprepct,jcsample,jctrans,jdapimin,jdapistd,jdarith,jdatadst,jdatasrc,jdcoefct,jdcolor,jddctmgr,jddiffct,jdhuff,jdicc,jdinput,jdlhuff,jdlossls,jdmainct,jdmarker,jdmaster,jdmerge,jdphuff,jdpostct,jdsample,jdtrans,jerror,jfdctflt,jfdctfst,jfdctint,jidctflt,jidctfst,jidctint,jidctred,jmemmgr,jmemnobs,jpeg_nbits,jquant1,jquant2,jutils}.c",
+        "third_party/opencv-5.0.0/3rdparty/libpng/*.c",
+        "third_party/opencv-5.0.0/3rdparty/libpng/intel/*.c",
+        "third_party/opencv-5.0.0/3rdparty/zlib/*.c",
+        "third_party/opencv-5.0.0/modules/core/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/core/src/opencl/runtime/*.cpp",
+        "third_party/opencv-5.0.0/modules/core/src/parallel/*.cpp",
+        "third_party/opencv-5.0.0/modules/core/src/utils/*.cpp",
+        "third_party/opencv-5.0.0/modules/flann/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/geometry/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/geometry/src/ptcloud/*.cpp",
+        "third_party/opencv-5.0.0/modules/geometry/src/usac/*.cpp",
+        "third_party/opencv-5.0.0/modules/highgui/src/{backend,roiSelector,window}.cpp",
+        "third_party/opencv-5.0.0/modules/imgcodecs/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/imgproc/src/{accum,accum.dispatch,bilateral_filter.dispatch,blend,box_filter.dispatch,canny,clahe,color,color_hsv.dispatch,color_lab,color_rgb.dispatch,color_yuv.dispatch,colormap,connectedcomponents,contours_approx,contours_common,contours_link,contours_new,contours_truco,corner,corner.avx,cornersubpix,demosaicing,deriv,distransform,drawing,drawing_text,emd_new,filter.dispatch,fisheye,floodfill,gabor,generalized_hough,grabcut,histogram,hough,imgwarp,imgwarp.avx2,imgwarp.sse4_1,lsd,main,median_blur.dispatch,morph.dispatch,phasecorr,phasecorr_iterative,pyramids,resize,resize.avx2,resize.sse4_1,samplers,segmentation,smooth.dispatch,spatialgradient,stackblur,stb_truetype,sumpixels.dispatch,tables,templmatch,thresh,undistort.dispatch,utils}.cpp",
+        "third_party/opencv-5.0.0/modules/videoio/src/{backend_plugin,backend_static,cap,cap_ffmpeg,cap_images,cap_mjpeg_decoder,cap_mjpeg_encoder,cap_v4l,container_avi,videoio_registry}.cpp",
+        "gen/common/modules/core/{arithm.avx2,arithm.sse4_1,convert.avx2,convert_scale.avx2,count_non_zero.avx2,has_non_zero.avx2,mathfuncs_core.avx,mathfuncs_core.avx2,matmul.avx2,matmul.avx512_skx,matmul.sse4_1,mean.avx2,merge.avx2,minmax.avx2,minmax.sse4_1,nan_mask.avx2,norm.avx,norm.avx2,norm.sse4_1,reduce.avx2,split.avx2,stat.avx2,stat.sse4_2,sum.avx2,transpose.avx,transpose.avx2}.cpp",
+        "gen/common/modules/imgproc/{accum.avx,accum.avx2,accum.sse4_1,bilateral_filter.avx2,bilateral_filter.avx512_skx,box_filter.avx2,box_filter.avx512_skx,box_filter.sse4_1,color_hsv.avx2,color_hsv.sse4_1,color_rgb.avx2,color_rgb.sse4_1,color_yuv.avx2,color_yuv.sse4_1,filter.avx2,filter.sse4_1,median_blur.avx2,median_blur.avx512_skx,median_blur.sse4_1,morph.avx2,morph.sse4_1,smooth.avx2,smooth.sse4_1,sumpixels.avx2,sumpixels.avx512_skx,undistort.avx2,warp_kernels.avx2,warp_kernels.sse4_1}.cpp",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jsimdcpu.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jfdctflt-sse.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jccolor-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jcgray-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jchuff-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jcphuff-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jcsample-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jdcolor-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jdmerge-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jdsample-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jfdctfst-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jfdctint-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jidctflt-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jidctfst-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jidctint-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jidctred-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jquantf-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jquanti-sse2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jccolor-avx2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jcgray-avx2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jcsample-avx2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jdcolor-avx2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jdmerge-avx2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jdsample-avx2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jfdctint-avx2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jidctint-avx2.asm",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/x86_64/jquanti-avx2.asm",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcapistd.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jccolor.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcdiffct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jclossls.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcmainct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcprepct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcsample.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdapistd.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdcolor.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jddiffct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdlossls.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdmainct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdpostct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdsample.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jutils.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jccoefct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcdctmgr.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdcoefct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jddctmgr.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdmerge.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jfdctfst.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jfdctint.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctflt.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctfst.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctint.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctred.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jquant1.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jquant2.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcapistd.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jccolor.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcdiffct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jclossls.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcmainct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcprepct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcsample.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdapistd.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdcolor.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jddiffct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdlossls.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdmainct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdpostct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdsample.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jutils.c",
+    ]
+
+[target.'cfg(macos)'.build]
+cflags   = [
+    "-w",
+    "-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=int",
+    "-DHAVE_STDARG_H=1",
+    "-DHAVE_UNISTD_H=1",
+    "-DNEON_INTRINSICS",
+    "-DPNG_ARM_NEON_OPT=2",
+]
+cxxflags = [
+    "-w",
+    "-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=int",
+    "-DHAVE_STDARG_H=1",
+    "-DHAVE_UNISTD_H=1",
+    "-DNEON_INTRINSICS",
+    "-DPNG_ARM_NEON_OPT=2",
+]
+ldflags  = [
+    "-lpthread",
+    "-ldl",
+]
+sources  = [
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/arm/{jccolor-neon,jcgray-neon,jcphuff-neon,jcsample-neon,jdcolor-neon,jdmerge-neon,jdsample-neon,jfdctfst-neon,jfdctint-neon,jidctfst-neon,jidctint-neon,jidctred-neon,jquanti-neon}.c",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/arm/aarch64/{jchuff-neon,jsimd}.c",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/src/{jaricom,jcapimin,jcapistd,jcarith,jccoefct,jccolor,jcdctmgr,jcdiffct,jchuff,jcicc,jcinit,jclhuff,jclossls,jcmainct,jcmarker,jcmaster,jcomapi,jcparam,jcphuff,jcprepct,jcsample,jctrans,jdapimin,jdapistd,jdarith,jdatadst,jdatasrc,jdcoefct,jdcolor,jddctmgr,jddiffct,jdhuff,jdicc,jdinput,jdlhuff,jdlossls,jdmainct,jdmarker,jdmaster,jdmerge,jdphuff,jdpostct,jdsample,jdtrans,jerror,jfdctflt,jfdctfst,jfdctint,jidctflt,jidctfst,jidctint,jidctred,jmemmgr,jmemnobs,jpeg_nbits,jquant1,jquant2,jutils}.c",
+        "third_party/opencv-5.0.0/3rdparty/libpng/*.c",
+        "third_party/opencv-5.0.0/3rdparty/libpng/arm/filter_neon.S",
+        "third_party/opencv-5.0.0/3rdparty/libpng/arm/*.c",
+        "third_party/opencv-5.0.0/3rdparty/zlib/*.c",
+        "third_party/opencv-5.0.0/modules/core/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/core/src/opencl/runtime/*.cpp",
+        "third_party/opencv-5.0.0/modules/core/src/parallel/*.cpp",
+        "third_party/opencv-5.0.0/modules/core/src/utils/*.cpp",
+        "third_party/opencv-5.0.0/modules/flann/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/geometry/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/geometry/src/ptcloud/*.cpp",
+        "third_party/opencv-5.0.0/modules/geometry/src/usac/*.cpp",
+        "third_party/opencv-5.0.0/modules/highgui/src/{backend,roiSelector,window}.cpp",
+        "third_party/opencv-5.0.0/modules/imgcodecs/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/imgproc/src/{accum,accum.dispatch,bilateral_filter.dispatch,blend,box_filter.dispatch,canny,clahe,color,color_hsv.dispatch,color_lab,color_rgb.dispatch,color_yuv.dispatch,colormap,connectedcomponents,contours_approx,contours_common,contours_link,contours_new,contours_truco,corner,cornersubpix,demosaicing,deriv,distransform,drawing,drawing_text,emd_new,filter.dispatch,fisheye,floodfill,gabor,generalized_hough,grabcut,histogram,hough,imgwarp,lsd,main,median_blur.dispatch,morph.dispatch,phasecorr,phasecorr_iterative,pyramids,resize,samplers,segmentation,smooth.dispatch,spatialgradient,stackblur,stb_truetype,sumpixels.dispatch,tables,templmatch,thresh,undistort.dispatch,utils}.cpp",
+        "third_party/opencv-5.0.0/modules/videoio/src/{backend_plugin,backend_static,cap,cap_ffmpeg,cap_images,cap_mjpeg_decoder,cap_mjpeg_encoder,container_avi,videoio_registry}.cpp",
+        "gen/common/modules/core/transpose.neon.cpp",
+        "gen/common/modules/imgproc/warp_kernels.neon.cpp",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcapistd.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jccolor.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcdiffct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jclossls.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcmainct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcprepct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcsample.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdapistd.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdcolor.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jddiffct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdlossls.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdmainct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdpostct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdsample.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jutils.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jccoefct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcdctmgr.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdcoefct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jddctmgr.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdmerge.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jfdctfst.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jfdctint.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctflt.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctfst.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctint.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctred.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jquant1.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jquant2.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcapistd.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jccolor.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcdiffct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jclossls.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcmainct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcprepct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcsample.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdapistd.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdcolor.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jddiffct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdlossls.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdmainct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdpostct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdsample.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jutils.c",
+    ]
+
+[target.'cfg(windows)'.build]
+cflags   = [
+    "-msse3",
+    "-w",
+]
+cxxflags = [
+    "-msse3",
+    "-w",
+]
+ldflags  = [
+    "-lole32",
+]
+sources  = [
+        "gen/windows/tu/w/**/*.{c,cc,cpp,asm}",
+    ]
+
 
 [dependencies]
-# The full OpenCV 5.0.0 source build. compat.opencv is the unified descriptor
-# (mcpp-index #79): the from-source build, pulling compat.ffmpeg transitively for
-# the videoio FFmpeg backend. Its optional `unifont`/`dnn` features are exposed
-# through this package's own features below via mcpp#243 dep-feature forwarding.
-compat.opencv = "5.0.0"
+# FFmpeg videoio backend — stays a compat package (separate unification
+# decision). Source-built by mcpp for whatever target/toolchain is active.
+compat.ffmpeg = "8.1.2"
 
 [dev-dependencies]
 compat.gtest = "1.15.2"
 
-# ── Optional features (mcpp#243 dep/feat forwarding, mcpp >= 0.0.99) ──────────
-# Each forwards the matching compat.opencv feature, so enabling it here builds
-# the underlying library with that feature AND (for dnn) adds the module
-# interface. Consumers opt in: opencv = { version = "0.0.4", features = ["dnn"] }.
 [features]
-# dnn: the deep-learning module. Adds the opencv.dnn interface source and
-# forwards compat.opencv/dnn (+ modules/dnn, vendored protobuf, mlas). ~309
-# extra TUs in the underlying build — only for consumers that ask.
-dnn = { sources = ["src/dnn.cppm"], forward = ["compat.opencv/dnn"] }
-# unifont: Unicode/CJK putText coverage. Pure forward — no new module surface
-# (FontFace("uni") is already in the imgproc interface); it just builds
-# compat.opencv with its unifont feature (embeds the WenQuanYi Micro Hei font).
-unifont = { forward = ["compat.opencv/unifont"] }
+unifont = { defines = ["HAVE_UNIFONT"] }
+
+[features.dnn]
+defines = [
+    "HAVE_OPENCV_DNN",
+]
+# The dnn LIBRARY sources are per-OS by construction (windows compiles
+# them through its tu/w/ stub namespace so its per-glob flags can key on
+# the paths) -> ALL of them are injected by build.mcpp from
+# gen/<os>/DNN_SOURCES.txt; only the module interface lives here.
+sources = [
+        "src/dnn.cppm",
+    ]
+
+[[features.dnn.flags]]
+glob = "**/modules/dnn/**"
+defines = [
+    "ENABLE_PLUGINS",
+    "HAVE_MLAS=1",
+    "HAVE_PROTOBUF=1",
+    "NDEBUG",
+    "_USE_MATH_DEFINES",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[features.dnn.flags]]
+glob = "**/3rdparty/mlas/**"
+defines = [
+    "BUILD_MLAS_NO_ONNXRUNTIME=1",
+    "MLAS_GEMM_ONLY=1",
+    "MLAS_OPENCV_THREADING=1",
+    "NDEBUG",
+    "_GNU_SOURCE=1",
+    "_USE_MATH_DEFINES",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[features.dnn.flags]]
+glob = "**/tu/mlasgemm/**"
+defines = [
+    "BUILD_MLAS_NO_ONNXRUNTIME=1",
+    "MLAS_GEMM_ONLY=1",
+    "MLAS_OPENCV_THREADING=1",
+    "NDEBUG",
+    "_USE_MATH_DEFINES",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[features.dnn.flags]]
+glob = "**/3rdparty/protobuf/**"
+defines = [
+    "HAVE_PTHREAD=1",
+    "NDEBUG",
+]
+
+[[features.dnn.flags]]
+glob = "**/modules/dnn/**/*.avx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX",
+]
+
+[[features.dnn.flags]]
+glob = "**/modules/dnn/**/*.avx2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX2",
+]
+
+[[features.dnn.flags]]
+glob = "**/modules/dnn/**/*.avx512_skx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+    "-mavx512f",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512vl",
+    "-mavx512bw",
+    "-mavx512dq",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX512_COMMON=1",
+    "CV_CPU_COMPILE_AVX512_SKX=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_AVX_512F=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
+]
+
+[[features.dnn.flags]]
+glob = "third_party/opencv-5.0.0/3rdparty/mlas/lib/platform.cpp"
+cxxflags = [
+    "-include",
+    "unistd.h",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/int8layers/layers_common.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/activation_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/conv2_depthwise.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/conv2_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/conv_block.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/conv_block.neon_fp16.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON_FP16",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/conv_winograd_f63.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/fast_gemm_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/gridsample_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/nary_eltwise_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/reduce2_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/transpose_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/layers_common.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/windows/tu/wdnn/dnn/**"
+defines = [
+    "ENABLE_PLUGINS",
+    "HAVE_PROTOBUF=1",
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_CRT_SECURE_NO_WARNINGS=1",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[features.dnn.flags]]
+glob = "gen/windows/tu/wdnn/protobuf/**"
+defines = [
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_CRT_SECURE_NO_WARNINGS=1",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+]
+
+[[features.dnn.flags]]
+glob = "gen/windows/tu/wdnn/dnn/**/*.avx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX",
+]
+
+[[features.dnn.flags]]
+glob = "gen/windows/tu/wdnn/dnn/**/*.avx2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX2",
+]
+
+[[features.dnn.flags]]
+glob = "gen/windows/tu/wdnn/dnn/**/*.avx512_skx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+    "-mavx512f",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512vl",
+    "-mavx512bw",
+    "-mavx512dq",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX512_COMMON=1",
+    "CV_CPU_COMPILE_AVX512_SKX=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_AVX_512F=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
+]
+
+[[features.dnn.flags]]
+glob = "gen/windows/tu/wdnn/dnn/third_party_opencv-5.0.0_modules_dnn_src_backend.cpp"
+defines = [
+    "DEBUG_POSTFIX=d",
+]
+
+# musl leg: mcpp build --target x86_64-linux-musl (toolchain resolved from the
+# installed gcc-musl pair; static is the supported linkage for this target).
+[target.x86_64-linux-musl]
+linkage = "static"
 
 [targets.opencv]
 kind = "lib"

@@ -1,0 +1,24 @@
+{
+    "const_ignore_list": [
+        "CV_CAP_OPENNI2",
+        "CV_CAP_INTELPERC",
+        "CV_CAP_ANY",
+        "CV_CAP_MIL",
+        "CV_CAP_V4L",
+        "CV_CAP_V4L2",
+        "CV_CAP_FIREWARE",
+        "CV_CAP_FIREWIRE",
+        "CV_CAP_IEEE1394",
+        "CV_CAP_DC1394",
+        "CV_CAP_CMU1394",
+        "CV_CAP_STEREO",
+        "CV_CAP_TYZX",
+        "CV_CAP_DSHOW",
+        "CV_CAP_PVAPI",
+        "CV_CAP_ARAVIS",
+        "CV_TYZX_LEFT",
+        "CV_TYZX_RIGHT",
+        "CV_TYZX_COLOR",
+        "CV_TYZX_Z"
+    ]
+}

@@ -73,3 +73,7 @@ target/
 mcpp.lock
 .mcpp/
 .xlings/
+
+# python bytecode (tools import hdr_parser from third_party)
+__pycache__/
+*.pyc

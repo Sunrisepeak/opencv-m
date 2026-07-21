@@ -15,11 +15,10 @@ each entity is exported by exactly one home module. Sub-namespace names
 (cv.ocl.X, cv.utils.X, …) group into nested namespace blocks; cv.detail and
 private surfaces are dropped.
 
-Usage: gen_exports.py [opencv-root]      (default: pinned official tarball
-                                          via tools/fetch_upstream.sh)
+Usage: gen_exports.py [opencv-root]      (default: the vendored
+                                          third_party/opencv-5.0.0 tree)
 """
 import re
-import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -35,8 +34,7 @@ SKIP_NS = ("detail", "internal", "traits", "hal", "instr", "utils", "samples",
 def opencv_root() -> Path:
     if len(sys.argv) > 1:
         return Path(sys.argv[1]).resolve()
-    fetch = REPO / "tools" / "fetch_upstream.sh"
-    return Path(subprocess.check_output(["sh", str(fetch)], text=True).strip())
+    return REPO / "third_party" / "opencv-5.0.0"  # vendored source
 
 
 def module_headers(root: Path, mod: str):

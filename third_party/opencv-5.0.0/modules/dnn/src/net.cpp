@@ -1,0 +1,571 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+#include "precomp.hpp"
+
+#include "net_impl.hpp"
+
+namespace cv {
+namespace dnn {
+CV__DNN_INLINE_NS_BEGIN
+
+Net::Net()
+    : impl(makePtr<Net::Impl>())
+{
+    setPreferableBackend(DNN_BACKEND_DEFAULT);
+}
+
+Net::~Net()
+{
+}
+
+int Net::addLayer(const String& name, const String& type, const int& dtype, LayerParams& params)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->addLayer(name, type, dtype, params);
+}
+
+int Net::addLayer(const String& name, const String& type, LayerParams& params)
+{
+    CV_TRACE_FUNCTION();
+    return addLayer(name, type, CV_32F, params);
+}
+
+int Net::addLayerToPrev(const String& name, const String& type, const int& dtype, LayerParams& params)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->addLayerToPrev(name, type, dtype, params);
+}
+
+int Net::addLayerToPrev(const String& name, const String& type, LayerParams& params)
+{
+    CV_TRACE_FUNCTION();
+    return addLayerToPrev(name, type, CV_32F, params);
+}
+
+void Net::connect(int outLayerId, int outNum, int inpLayerId, int inpNum)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    impl->connect(outLayerId, outNum, inpLayerId, inpNum);
+}
+
+void Net::connect(String _outPin, String _inPin)
+{
+    CV_TRACE_FUNCTION();
+
+    CV_Assert(impl);
+    LayerPin outPin = impl->getPinByAlias(_outPin);
+    LayerPin inpPin = impl->getPinByAlias(_inPin);
+
+    CV_Assert(outPin.valid() && inpPin.valid());
+
+    impl->connect(outPin.lid, outPin.oid, inpPin.lid, inpPin.oid);
+}
+
+int Net::registerOutput(const std::string& outputName, int layerId, int outputPort)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->registerOutput(outputName, layerId, outputPort);
+}
+
+Mat Net::forward(const String& outputName)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    CV_Assert(!empty());
+    return impl->forward(outputName);
+}
+
+AsyncArray Net::forwardAsync(const String& outputName)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    CV_Assert(!empty());
+    return impl->forwardAsync(outputName);
+}
+
+void Net::forward(OutputArrayOfArrays outputBlobs, const String& outputName)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    CV_Assert(!empty());
+    return impl->forward(outputBlobs, outputName);
+}
+
+void Net::forward(OutputArrayOfArrays outputBlobs,
+        const std::vector<String>& outBlobNames)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    CV_Assert(!empty());
+    return impl->forward(outputBlobs, outBlobNames);
+}
+
+void Net::forward(std::vector<std::vector<Mat>>& outputBlobs,
+        const std::vector<String>& outBlobNames)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    CV_Assert(!empty());
+    return impl->forward(outputBlobs, outBlobNames);
+}
+
+void Net::setPreferableBackend(int backendId)
+{
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG(backendId);
+    CV_Assert(impl);
+    return impl->setPreferableBackend(*this, backendId);
+}
+
+void Net::setPreferableTarget(int targetId)
+{
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG(targetId);
+    CV_Assert(impl);
+    return impl->setPreferableTarget(targetId);
+}
+
+void Net::finalizeNet()
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+#ifdef HAVE_ONNXRUNTIME
+    if (impl->useOrtEngine && impl->mainGraph && impl->modelFormat == DNN_MODEL_ONNX && !impl->modelFileName.empty())
+    {
+        impl->finalizeOrt();
+        return;
+    }
+#endif
+}
+
+void Net::setInputsNames(const std::vector<String>& inputBlobNames)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->setInputsNames(inputBlobNames);
+}
+
+void Net::setInputShape(const String& inputName, const MatShape& shape)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->setInputShape(inputName, shape);
+}
+
+void Net::setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean)
+{
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+    CV_Assert(impl);
+    return impl->setInput(blob, name, scalefactor, mean);
+}
+
+Mat Net::getParam(int layer, int numParam) const
+{
+    CV_Assert(impl);
+    return impl->getParam(layer, numParam);
+}
+
+void Net::setParam(int layer, int numParam, const Mat& blob)
+{
+    CV_Assert(impl);
+    return impl->setParam(layer, numParam, blob);
+}
+
+void Net::setParam(const String& name, int numParam, const Mat& blob)
+{
+    CV_Assert(impl);
+    return impl->setParam(name, numParam, blob);
+}
+
+int Net::getLayerId(const String& layer) const
+{
+    CV_Assert(impl);
+    return impl->getLayerId(layer);
+}
+
+String Net::dump()
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    if (impl->mainGraph) {
+        std::stringstream sstrm;
+        dumpToStream(sstrm);
+        return sstrm.str();
+    }
+    CV_Assert(!empty());
+    return impl->dump(true);
+}
+
+void Net::dumpToStream(std::ostream& strm) const
+{
+    if (impl->mainGraph) {
+        impl->dump(strm);
+    }
+}
+
+void Net::dumpToFile(const String& path)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    CV_Assert(!empty());
+    std::ofstream file(path.c_str());
+    if (impl->mainGraph) {
+        impl->dump(file);
+    } else {
+        file << dump();
+    }
+    file.close();
+}
+
+void Net::dumpToPbtxt(const String& path)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    CV_Assert(!empty());
+    std::ofstream file(path.c_str());
+    file << impl->dumpToPbtxt(true);
+    file.close();
+}
+
+Ptr<Layer> Net::getLayer(int layerId) const
+{
+    CV_Assert(impl);
+    return impl->getLayer(layerId);
+}
+Ptr<Layer> Net::getLayer(const LayerId& layerId) const
+{
+    CV_Assert(impl);
+    return impl->getLayer(layerId);
+}
+
+std::vector<Ptr<Layer>> Net::getLayerInputs(int layerId) const
+{
+    CV_Assert(impl);
+    return impl->getLayerInputs(layerId);
+}
+
+std::vector<String> Net::getLayerNames() const
+{
+    CV_Assert(impl);
+    return impl->getLayerNames();
+}
+
+bool Net::empty() const
+{
+    CV_Assert(impl);
+    return impl->empty();
+}
+
+// FIXIT drop "unconnected" API
+std::vector<int> Net::getUnconnectedOutLayers() const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->getUnconnectedOutLayers();
+}
+
+// FIXIT drop "unconnected" API
+std::vector<String> Net::getUnconnectedOutLayersNames() const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->getUnconnectedOutLayersNames();
+}
+
+void Net::getLayersShapes(const ShapesVec& netInputShapes,
+        const TypesVec& netInputTypes,
+        std::vector<int>& layersIds,
+        std::vector<ShapesVec>& inLayersShapes,
+        std::vector<ShapesVec>& outLayersShapes) const
+{
+    CV_Assert(impl);
+    return impl->getLayersShapes(netInputShapes, netInputTypes, layersIds, inLayersShapes, outLayersShapes);
+}
+
+void Net::getLayersShapes(const MatShape& netInputShape,
+        const MatType& netInputType,
+        std::vector<int>& layerIds,
+        std::vector<ShapesVec>& inLayersShapes,
+        std::vector<ShapesVec>& outLayersShapes) const
+{
+    getLayersShapes(ShapesVec(1, netInputShape),
+            TypesVec(1, netInputType),
+            layerIds, inLayersShapes, outLayersShapes);
+}
+
+void Net::getLayerShapes(const MatShape& netInputShape,
+        const MatType& netInputType,
+        const int layerId,
+        ShapesVec& inLayerShapes,
+        ShapesVec& outLayerShapes) const
+{
+    getLayerShapes(ShapesVec(1, netInputShape), TypesVec(1, netInputType),
+            layerId, inLayerShapes, outLayerShapes);
+}
+
+void Net::getLayerShapes(const ShapesVec& netInputShapes,
+        const TypesVec& netInputTypes,
+        const int layerId,
+        ShapesVec& inLayerShapes,
+        ShapesVec& outLayerShapes) const
+{
+    CV_Assert(impl);
+    LayerShapes shapes;
+    impl->getLayerShapes(netInputShapes, netInputTypes, layerId, shapes);
+    inLayerShapes = shapes.in;
+    outLayerShapes = shapes.out;
+}
+
+int64 Net::getFLOPS(const std::vector<MatShape>& netInputShapes, const std::vector<MatType>& netInputTypes) const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->getFLOPS(netInputShapes, netInputTypes);
+}
+
+int64 Net::getFLOPS(const MatShape& netInputShape, const MatType& netInputType) const
+{
+    return getFLOPS(std::vector<MatShape>(1, netInputShape),
+                    std::vector<MatType>(1, netInputType));
+}
+
+int64 Net::getFLOPS(const int layerId,
+        const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes) const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->getFLOPS(layerId, netInputShapes, netInputTypes);
+}
+
+int64 Net::getFLOPS(const int layerId,
+        const MatShape& netInputShape,
+        const MatType& netInputType) const
+{
+    return getFLOPS(layerId, std::vector<MatShape>(1, netInputShape),
+                    std::vector<MatType>(1, netInputType));
+}
+
+void Net::getLayerTypes(std::vector<String>& layersTypes) const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->getLayerTypes(layersTypes);
+}
+
+int Net::getLayersCount(const String& layerType) const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->getLayersCount(layerType);
+}
+
+void Net::getMemoryConsumption(const int layerId,
+        const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
+        size_t& weights, size_t& blobs) const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->getMemoryConsumption(layerId, netInputShapes, netInputTypes, weights, blobs);
+}
+
+void Net::getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
+        size_t& weights, size_t& blobs) const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->getMemoryConsumption(netInputShapes, netInputTypes, weights, blobs);
+}
+
+void Net::getMemoryConsumption(const int layerId,
+        const MatShape& netInputShape,
+        const MatType& netInputType,
+        size_t& weights, size_t& blobs) const
+{
+    getMemoryConsumption(layerId, std::vector<MatShape>(1, netInputShape),
+        std::vector<MatType>(1, netInputType),
+        weights, blobs);
+}
+
+void Net::getMemoryConsumption(const MatShape& netInputShape,
+        const MatType& netInputType,
+        size_t& weights, size_t& blobs) const
+{
+    getMemoryConsumption(std::vector<MatShape>(1, netInputShape),
+            std::vector<MatType>(1, netInputType),
+            weights, blobs);
+}
+
+void Net::getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
+        std::vector<int>& layerIds, std::vector<size_t>& weights,
+        std::vector<size_t>& blobs) const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->getMemoryConsumption(netInputShapes, netInputTypes, layerIds, weights, blobs);
+}
+
+void Net::getMemoryConsumption(const MatShape& netInputShape, const MatType& netInputType,
+        std::vector<int>& layerIds,
+        std::vector<size_t>& weights, std::vector<size_t>& blobs) const
+{
+    getMemoryConsumption(std::vector<MatShape>(1, netInputShape),
+            std::vector<MatType>(1, netInputType),
+            layerIds, weights, blobs);
+}
+
+// FIXIT return old value or add get method
+void Net::enableFusion(bool fusion)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->enableFusion(fusion);
+}
+
+void Net::enableWinograd(bool useWinograd)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->enableWinograd(useWinograd);
+}
+
+int64 Net::getPerfProfile(std::vector<double>& timings)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->getPerfProfile(timings);
+}
+
+void Net::getPerfProfile(std::vector<std::string>& names,
+                         std::vector<std::string>& timems,
+                         std::vector<std::string>& counts) const
+{
+    CV_Assert(impl);
+    impl->getPerfProfile(names, timems, counts);
+}
+
+void Net::printPerfProfile() const
+{
+    CV_Assert(impl);
+    impl->printPerfProfile();
+}
+
+bool Net::isConstArg(Arg arg) const
+{
+    return argKind(arg) == DNN_ARG_CONST;
+}
+
+const ArgData& Net::argData(Arg arg) const
+{
+    CV_Assert(impl);
+    CV_Assert((size_t)arg.idx < impl->args.size());
+    return impl->args[arg.idx];
+}
+
+const std::string& Net::argName(Arg arg) const { return argData(arg).name; }
+
+ArgKind Net::argKind(Arg arg) const { return argData(arg).kind; }
+
+Mat& Net::argTensor(Arg arg) const {
+    CV_Assert(impl);
+    return impl->argTensor(arg);
+}
+
+Arg Net::getArg(const std::string& name)
+{
+    CV_Assert(impl);
+    return impl->getArg(name);
+}
+
+bool Net::haveArg(const std::string& name) const
+{
+    CV_Assert(impl);
+    return impl->haveArg(name);
+}
+
+void Net::enableKVCache()
+{
+    CV_Assert(impl);
+    setKVCacheManager(impl);
+}
+
+void Net::disableKVCache()
+{
+    CV_Assert(impl);
+    impl->kvCacheManager = KVCacheManager();
+}
+
+void Net::resetKVCache()
+{
+    CV_Assert(impl);
+    setKVCacheManager(impl);
+}
+
+
+Ptr<Graph> Net::getMainGraph() const
+{
+    CV_Assert(impl);
+    return impl->mainGraph;
+}
+
+std::ostream& Net::dumpArg(std::ostream& strm, Arg arg, int indent,
+                           bool comma, bool dump_details) const
+{
+    CV_Assert(impl);
+    return impl->dumpArg(strm, arg, indent, comma, dump_details);
+}
+
+int Net::findDim(const std::string& dimname, bool insert)
+{
+    CV_Assert(impl);
+    return impl->findDim(dimname, insert);
+}
+
+std::ostream& Net::dumpDim(std::ostream& strm, int value) const
+{
+    CV_Assert(impl);
+    return impl->dumpDim(strm, value);
+}
+
+void Net::setTracingMode(TracingMode tracingMode)
+{
+    CV_Assert(impl);
+    impl->tracingMode = tracingMode;
+}
+
+TracingMode Net::getTracingMode() const
+{
+    CV_Assert(impl);
+    return impl->tracingMode;
+}
+
+void Net::setProfilingMode(ProfilingMode profilingMode)
+{
+    CV_Assert(impl);
+    impl->profilingMode = profilingMode;
+}
+
+ProfilingMode Net::getProfilingMode() const
+{
+    CV_Assert(impl);
+    return impl->profilingMode;
+}
+
+ModelFormat Net::getModelFormat() const
+{
+    CV_Assert(impl);
+    return impl->modelFormat;
+}
+
+CV__DNN_INLINE_NS_END
+}}  // namespace cv::dnn

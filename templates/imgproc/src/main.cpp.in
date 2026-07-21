@@ -1,10 +1,10 @@
-// {{name}} — OpenCV 5 via C++23 modules: same API, no headers.
+// {{project.name}} — OpenCV 5 via C++23 modules: same API, no headers.
 import std;
 import opencv.cv;
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::println(stderr, "usage: {{name}} <image-file>");
+        std::println(stderr, "usage: {{project.name}} <image-file>");
         return 1;
     }
     cv::Mat img = cv::imread(argv[1], cv::IMREAD_COLOR);

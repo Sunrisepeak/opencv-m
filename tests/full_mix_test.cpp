@@ -34,12 +34,12 @@ TEST(FullMix, ValueTypeOperators) {
 
     cv::Rect r1(0, 0, 10, 10), r2(5, 5, 10, 10);
     cv::Rect ri = r1 & r2;
-    EXPECT_EQ(ri, cv::Rect(5, 5, 5, 5));
+    EXPECT_TRUE(ri == cv::Rect(5, 5, 5, 5));
     cv::Rect ru = r1 | r2;
-    EXPECT_EQ(ru, cv::Rect(0, 0, 15, 15));
+    EXPECT_TRUE(ru == cv::Rect(0, 0, 15, 15));
 
     cv::Range g1(2, 8), g2(4, 12);
-    EXPECT_EQ((g1 & g2), cv::Range(4, 8));
+    EXPECT_TRUE((g1 & g2) == cv::Range(4, 8));
 
     cv::Scalar c1(1, 2, 3, 4), c2(1, 2, 3, 4);
     EXPECT_TRUE(c1 == c2);

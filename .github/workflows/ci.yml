@@ -14,62 +14,156 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  MCPP_VERSION: "0.0.101"
+
 jobs:
-  linux:
-    name: mcpp (ubuntu-latest, required)
-    runs-on: ubuntu-latest
-    # This job source-builds OpenCV 5 (+ transitive compat.ffmpeg) on a cold
-    # runner TWICE: once for the default base+videoio profile, then the
-    # `--features dnn,unifont` step re-keys the store into a second variant
-    # (base + dnn + unifont, dnn dominating). ~50 min each cold; 150 leaves
-    # headroom. The ~/.mcpp registry cache would amortize this, but it is not
-    # persisted here.
+  # ── Platform × toolchain matrix ─────────────────────────────────────────
+  # Every leg source-builds the vendored OpenCV 5 (+ compat.ffmpeg) cold:
+  # ~2700 TUs. The ~/.mcpp/registry cache carries toolchains and the built
+  # compat.ffmpeg across runs; timeout is sized for the COLD path.
+  #
+  # All five legs are required. Notes on the two that were experimental:
+  #   linux-musl  — needed mcpp-index#110 (compat.ffmpeg
+  #                 -Wno-error=incompatible-pointer-types for musl's ioctl
+  #                 signature); merged as e83ed49, green since.
+  #   windows     — builds through the gen/windows/tu/w*/ stub-namespace
+  #                 workaround for mcpp-community/mcpp#258 (windows per-glob
+  #                 flags keyed on windows-only stub paths). Delete the stub
+  #                 layer when per-OS flag tables land upstream.
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 150
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-gcc
+            os: ubuntu-latest
+            suffix: linux-x86_64
+            ext: tar.gz
+            mcpp: bin/mcpp
+            setup: |
+              mcpp toolchain install gcc 16.1.0
+              mcpp toolchain default gcc@16.1.0
+            experimental: false
+            features: true
+            examples: true
+          - name: linux-llvm-22
+            os: ubuntu-latest
+            suffix: linux-x86_64
+            ext: tar.gz
+            mcpp: bin/mcpp
+            # gcc first: `mcpp toolchain install llvm` does not pull the
+            # xim glibc runtime its binaries are patchelf'd against (their
+            # ELF interpreter lives under xim-x-glibc/2.39 → exec 127 on a
+            # bare runner); the gcc install brings it.
+            # mcpp packaging gap: mcpp-community/mcpp#259.
+            setup: |
+              mcpp toolchain install gcc 16.1.0
+              mcpp toolchain install llvm 22.1.8
+              mcpp toolchain default llvm@22.1.8
+            experimental: false
+            features: false
+            examples: false
+          - name: linux-musl-static
+            os: ubuntu-latest
+            suffix: linux-x86_64
+            ext: tar.gz
+            mcpp: bin/mcpp
+            setup: |
+              mcpp toolchain install gcc 16 --target x86_64-linux-musl
+              mcpp toolchain default gcc@16.1.0 --target x86_64-linux-musl
+            experimental: false
+            features: false
+            examples: false
+          - name: macos-llvm
+            os: macos-15
+            suffix: macosx-arm64
+            ext: tar.gz
+            mcpp: bin/mcpp
+            setup: ""   # mcpp resolves its macOS default (llvm) itself
+            experimental: false
+            features: false
+            examples: false
+          - name: windows-llvm
+            os: windows-latest
+            suffix: windows-x86_64
+            ext: zip
+            mcpp: bin/mcpp.exe
+            setup: ""
+            experimental: false
+            features: false
+            examples: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # No apt nasm: compat.opencv's NASM .asm units (jpeg-turbo SIMD, core AVX)
-      # are covered by mcpp's synchronous nasm bootstrap via xlings (mcpp#232,
-      # floor 0.0.98) — the same drop already proven in mcpp-index and ffmpeg-m.
-      - name: Install Xlings
+      - name: Restore mcpp registry cache
+        uses: actions/cache@v4
+        with:
+          # Holds toolchains AND built deps (compat.ffmpeg, gtest), so a
+          # repeat run rebuilds little. Keyed per leg; prefix-restores across
+          # manifest changes.
+          path: ~/.mcpp/registry
+          key: mcpp-registry-${{ matrix.name }}-${{ env.MCPP_VERSION }}-${{ hashFiles('mcpp.toml', '.github/workflows/ci.yml') }}
+          restore-keys: |
+            mcpp-registry-${{ matrix.name }}-${{ env.MCPP_VERSION }}-
+
+      - name: Download mcpp
+        shell: bash
         env:
-          XLINGS_NON_INTERACTIVE: 1
+          MCPP_ARCHIVE: mcpp-${{ env.MCPP_VERSION }}-${{ matrix.suffix }}.${{ matrix.ext }}
+          MCPP_ROOT: mcpp-${{ env.MCPP_VERSION }}-${{ matrix.suffix }}
         run: |
-          curl -fsSL https://raw.githubusercontent.com/openxlings/xlings/refs/heads/main/tools/other/quick_install.sh | bash
-          echo "$HOME/.xlings/subos/current/bin" >> "$GITHUB_PATH"
+          curl -L -fsS -o "$MCPP_ARCHIVE" \
+            "https://github.com/mcpp-community/mcpp/releases/download/v${MCPP_VERSION}/${MCPP_ARCHIVE}"
+          case "$MCPP_ARCHIVE" in
+            *.zip) powershell -NoProfile -Command "Expand-Archive -Force -Path '${MCPP_ARCHIVE}' -DestinationPath '.'" ;;
+            *)     tar -xzf "$MCPP_ARCHIVE" ;;
+          esac
+          root="$PWD/$MCPP_ROOT"
+          mkdir -p "$HOME/.mcpp/registry"
+          cp -a "$root/registry/." "$HOME/.mcpp/registry/"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            echo "$(cygpath -m "$root/bin")" >> "$GITHUB_PATH"
+          else
+            echo "$root/bin" >> "$GITHUB_PATH"
+          fi
 
-      - name: Install project tools
+      - name: Set up toolchain
+        if: matrix.setup != ''
+        shell: bash
         run: |
-          xlings update
-          xlings install
-
-      - name: Set default toolchain
-        run: |
-          mcpp toolchain install gcc 16.1.0
-          mcpp toolchain default gcc@16.1.0
+          ${{ matrix.setup }}
           mcpp --version
 
-      - name: Build library (via compat.opencv source build)
+      - name: Template placeholder lint
+        if: matrix.features
+        shell: bash
+        # mcpp's renderer knows exactly {{project.name}} / {{self.name}} /
+        # {{self.version}} — anything else ships literally into scaffolds.
+        run: |
+          bad=$(grep -rno '{{[^}]*}}' templates/ | grep -v -E '\{\{(project\.name|self\.name|self\.version)\}\}' || true)
+          if [ -n "$bad" ]; then echo "unknown template placeholders:"; echo "$bad"; exit 1; fi
+
+      - name: Build
+        shell: bash
         run: mcpp build
 
-      - name: Run tests (API surface + macros mix + codec roundtrips)
+      - name: Test
+        shell: bash
         run: mcpp test
 
-      # Optional features (mcpp#243 dep/feat forwarding): dnn adds the
-      # opencv.dnn module interface + forwards compat.opencv/dnn; unifont
-      # forwards compat.opencv/unifont. Built together = one extra OpenCV
-      # variant (base + dnn + unifont). The feature-gated tests are no-ops
-      # in the default `mcpp test` above, so this is where they run.
-      - name: Run feature tests (dnn + unifont module interfaces)
+      - name: Feature tests (dnn + unifont module interfaces)
+        if: matrix.features
+        shell: bash
         run: mcpp test --features dnn,unifont
 
-      - name: Run probe example (path-dep consumer)
-        run: |
-          cd examples/probe
-          mcpp run
-
-      - name: Run gray_pipeline example
-        run: |
-          cd examples/gray_pipeline
-          mcpp run
+      # NOTE examples are exercised locally, not here: each one is a path-dep
+      # consumer that cold-rebuilds the whole vendored OpenCV (+ffmpeg) in its
+      # own target/ (~40 min per example on a 4-core runner) while adding
+      # little over what `mcpp test` already covers. Revisit if mcpp learns
+      # to share dep artifacts with path-dep consumers.

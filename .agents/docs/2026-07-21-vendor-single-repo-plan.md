@@ -276,6 +276,44 @@ Note: `compat.gtest` stays a dep — dev-dependency only, out of scope for unifi
 - [ ] Update `.agents/docs/` pointer docs if any reference compat.opencv as the build carrier.
 - [ ] Final commit + summary to user (PR/merge decision is the user's).
 
+## RESULTS (2026-07-21, session execution — all three legs GREEN)
+
+| Leg | Result | Notes |
+|---|---|---|
+| gcc 16.1.0 | ✅ 6/6 + `--features dnn,unifont` 6/6 | cold build 45.6s (2745 TU incl. compat.ffmpeg), first try |
+| llvm 22.1.8 | ✅ 6/6 | after the module-layer de-poisoning below |
+| llvm 20.1.7 | ✅ 6/6 | same |
+| gcc-musl (`--target x86_64-linux-musl`, static) | ✅ 6/6, statically linked ELF | vendored OpenCV needed ZERO musl deltas; one dep-side flag (below) |
+
+**linux-clang findings (the big one).** The opencv-m gtest suite had never run under
+ANY clang (mac/win CI only builds simple consumer smokes). clang 20/22 segfault
+(exit 139) whenever an importer uses certain names on any cv type. Root cause
+(bisected to single decls via a reduced `--precompile` harness): replacement
+templates whose parameters are not all pinned by the first argument —
+`template<typename _Tp,int m,int n,int l>` Matx×Matx `operator*`,
+`Matx<_Tp,m,m>` `determinant`, two-typename `+=`/`-=`, comma-init `<<` —
+poison clang's ADL/lookup for that NAME once serialized into a BMI. Fixed by
+rewriting those over whole deduced operand types (`_MA` + `mat_type`
+self-check); upstream's exact-pattern static-inlines stay more specialized in
+mixed TUs. Also: cv-typed `EXPECT_EQ` → `EXPECT_TRUE(a==b)` (gtest printers
+probe `operator<<` by ADL), and affine.hpp/dualquaternion.hpp dropped from the
+core GMF (nothing exported from them; they only contributed namespace-scope
+`static operator*` decls). Minimal repros archived in session scratchpad
+(`clang22-crash/`, 2-line TU + BMI) for the upstream LLVM report.
+
+**musl deltas.** Exactly one, and it is dep-side: musl declares
+`ioctl(int,int,...)` vs glibc's `unsigned long`, so compat.ffmpeg's
+`libavdevice/v4l2.c` hits gcc14+'s incompatible-pointer-types-as-error.
+Fix applied to the LOCAL index copy
+(`~/.mcpp/registry/data/mcpplibs/pkgs/c/compat.ffmpeg.lua`): add
+`-Wno-error=incompatible-pointer-types` to the linux cflags (harmless on
+glibc). **Pending: mcpp-index PR to land the same one-line change.**
+
+**mcpp issue to file.** Editing a purview-`#include`d `.inc` (matx_ops.inc)
+did not retrigger the module interface rebuild under the llvm toolchain —
+stale BMI served (worked around with `touch src/*.cppm`). #235-family
+regression/gap on the clang path.
+
 ## Explicitly OUT of this session's scope (recorded for the follow-on)
 
 1. macOS/windows leg port: gen/{macosx,windows} trees are already committed by Task 2; remaining = `[target.'cfg(macos|windows)'.build]` fragments, build.mcpp `mcpp:source=` per-OS×feature selection, CI matrix. Windows dnn per-OS flag delta (mcpp#253 shape) needs either the manifest gap filed (`[target.cfg].flags` / per-OS features) or full build.mcpp mediation.

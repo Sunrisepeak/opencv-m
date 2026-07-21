@@ -1,11 +1,11 @@
 [package]
-name        = "{{name}}"
+name        = "{{project.name}}"
 version     = "0.1.0"
-description = "OpenCV image pipeline ({{name}})"
+description = "OpenCV image pipeline ({{project.name}})"
 
 [dependencies]
-opencv = "0.0.3"
+{{self.name}} = "{{self.version}}"
 
-[targets.{{name}}]
+[targets.{{project.name}}]
 kind = "bin"
 main = "src/main.cpp"

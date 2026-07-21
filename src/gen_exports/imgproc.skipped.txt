@@ -4,3 +4,5 @@ odd-name: cv.LineIterator.operator *
 odd-name: cv.LineIterator.operator ++
 pruned (compile-verify): cv::HoughCirclesWithAccumulator
 pruned (compile-verify): cv::HoughLinesWithAccumulator
+pruned (compile-verify): cv::initWideAngleProjMap
+pruned (compile-verify): cv::morphologyDefaultBorderValue

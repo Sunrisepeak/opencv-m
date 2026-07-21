@@ -20,9 +20,11 @@
 //
 // Style: modules-first per docs/07 — directives and the env contract go
 // through `import mcpp;` (the module is bundled in the mcpp binary, so it
-// always matches the protocol; `import std;` is NOT part of the build.mcpp
-// contract). Textual std includes remain only for the file I/O this program
-// does itself, and MUST precede the import. Diagnostics go to stdout as
+// always matches the protocol). `import std;` is NOT available in the
+// build.mcpp compile context — empirically verified 2026-07-21: only the
+// bundled `mcpp` module is wired up there (regular project TUs can import
+// std, this special TU cannot). Textual std includes remain for the file
+// I/O this program does itself, and MUST precede the import. Diagnostics go to stdout as
 // non-directive lines (never stderr: it can interleave into the buffered
 // directive stream).
 #include <algorithm>
@@ -125,17 +127,9 @@ int main() {
     // 1. per-OS include dirs
     std::string os = mcpp::target_os()[0] ? mcpp::target_os() : "linux";
     if (os == "macos") os = "macosx";  // gen/ keeps the descriptor-era dir name
-    if (os == "windows") {
-        // gen/windows/ snapshots are committed and ready, but the manifest
-        // cannot express windows' per-glob define deltas (WIN32/_CRT_* adds +
-        // unix HAVE_* removals on the same globs) until mcpp grows
-        // [target.'cfg(os)'] per-glob flags — mcpp-community/mcpp#258. The
-        // ported windows flag tables are parked in the port fragments.
-        std::printf("opencv-m build.mcpp: windows leg parked on mcpp-community/mcpp#258 "
-                    "(manifest per-OS per-glob flags)\n");
-        std::fflush(stdout);
-        return 1;
-    }
+    // windows compiles through the gen/windows/tu/w*/ stub namespace (see
+    // mcpp.toml header comment; workaround for mcpp-community/mcpp#258) —
+    // same INCLUDE_DIRS/DNN_SOURCES machinery as the other OSes from here on.
     std::string listrel = "gen/" + os + "/INCLUDE_DIRS.txt";
     std::ifstream list(man / listrel);
     if (!list) {

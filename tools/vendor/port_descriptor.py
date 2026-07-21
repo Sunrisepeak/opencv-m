@@ -225,8 +225,146 @@ class Port:
         for e in entries:
             e2 = dict(e)
             [e2["glob"]] = self.rw(o, e2["glob"])
+            # unix asm entry must not reach the windows asm stubs under gen/:
+            # every real .asm lives in the vendored tree, scope it there.
+            if e2["glob"] == "**/*.asm":
+                e2["glob"] = VENDOR + "/**/*.asm"
             out.append(e2)
         return out
+
+    # ── windows stub layer (workaround for the missing per-OS per-glob
+    #    flags in the manifest, mcpp-community/mcpp#258): every windows TU
+    #    becomes a one-line include stub under gen/windows/tu/w/<group>/ —
+    #    the PATH becomes the OS namespace, so the windows flag tables can
+    #    key on stub-dir globs inside the ordinary global [[build.flags]]
+    #    table with zero cross-OS overlap. Same trick the pre-0.0.97
+    #    compat.opencv5 used, scoped to windows only; delete when #258 lands.
+    @staticmethod
+    def _wgroup(path):
+        import re as _re
+        if path.endswith(".asm"):
+            return "asm"
+        m = _re.search(r"/modules/([a-z0-9_]+)/", path)
+        if m:
+            return m.group(1)
+        m = _re.search(r"/3rdparty/([a-zA-Z0-9_.-]+)/", path)
+        if m:
+            return m.group(1)
+        m = _re.search(r"/tu/([a-z0-9_]+)/", path)
+        if m:
+            return m.group(1)
+        return "misc"
+
+    def _expand_sources(self, o, entries):
+        """Rewritten source entries -> concrete repo-relative files."""
+        import glob as _glob
+        files = []
+        for g in entries:
+            for pat in expand_braces(g):
+                if "*" in pat:
+                    hits = sorted(_glob.glob(str(self.repo / pat), recursive=True))
+                    assert hits, f"zero-match source glob {pat}"
+                    files += [str(Path(h).relative_to(self.repo)) for h in hits]
+                else:
+                    files.append(pat)
+        return files
+
+    def _stub_for(self, path, prefix="w"):
+        """(stub relpath under gen/windows/tu/<prefix>/, stub content)."""
+        grp = self._wgroup(path)
+        mangled = path.replace("/", "_")
+        rel = f"tu/{prefix}/{grp}/{mangled}"
+        if path.endswith(".asm"):
+            # NASM: resolved via the -I fed from include_dirs (simd dir is on it)
+            content = f'; opencv-m windows asm stub\n%include "{Path(path).name}"\n'
+        else:
+            # resolved via -I third_party/opencv-5.0.0 or -I gen/common
+            if path.startswith(VENDOR + "/"):
+                inc = path[len(VENDOR) + 1:]
+            elif path.startswith("gen/common/"):
+                inc = path[len("gen/common/"):]
+            else:
+                raise SystemExit(f"windows stub: unexpected source root {path}")
+            content = f'/* opencv-m windows TU stub (mcpp#258 workaround) */\n#include "{inc}"\n'
+        return rel, content
+
+    def _remap_win_glob(self, g, prefix="w"):
+        import re as _re
+        if g == "**/*.asm":
+            return f"gen/windows/tu/{prefix}/asm/**"
+        m = _re.match(r"\*\*/modules/([a-z0-9_]+)/\*\*(.*)$", g)
+        if m:
+            return f"gen/windows/tu/{prefix}/{m.group(1)}/**{m.group(2)}"
+        m = _re.match(r"\*\*/3rdparty/([a-zA-Z0-9_.-]+)/\*\*(.*)$", g)
+        if m:
+            return f"gen/windows/tu/{prefix}/{m.group(1)}/**{m.group(2)}"
+        m = _re.match(r"\*\*/tu/([a-z0-9_]+)/\*\*$", g)
+        if m:
+            return f"gen/windows/tu/{prefix}/{m.group(1)}/**"
+        if "*" not in g:  # per-file entry -> its stub path
+            rel, _ = self._stub_for(g, prefix)
+            return f"gen/windows/{rel}"
+        raise SystemExit(f"windows flag glob not remappable: {g}")
+
+    def windows_stub_layer(self):
+        CFGW = "windows"
+        blk = self.mcpp[CFGW]
+        # base sources -> stubs (includes the jpeg12/16 stub files themselves:
+        # re-stubbed under w/ so the windows flag entries key on them)
+        srcs = []
+        for g in blk["sources"]:
+            srcs += self.rw(CFGW, g)
+        for rel in self.base_stubs[CFGW]:
+            srcs.append(f"gen/{self.where(CFGW, rel)}/{rel}")
+        files = self._expand_sources(CFGW, srcs)
+        n = 0
+        for f in files:
+            # the committed common/os tu stubs are already one include hop;
+            # windows re-stubs point at the REAL target directly
+            if "/tu/jpeg" in f:
+                content = self.staged[CFGW][f.split("gen/common/")[-1]] if f.startswith("gen/common/") else None
+                grp = self._wgroup(f)
+                rel = f"tu/w/{grp}/{f.replace('/', '_')}"
+                assert content is not None
+            else:
+                rel, content = self._stub_for(f)
+            out = self.repo / "gen/windows" / rel
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(content.replace("\\n", "\n") if "\\n" in content else content)
+            n += 1
+        print(f"windows stub layer: {n} stubs under gen/windows/tu/w/")
+
+        # windows flag tables remapped onto the stub namespace -> can join the
+        # global tables conflict-free
+        base_win = []
+        for e in self.rw_flags(CFGW, blk["flags"]):
+            e2 = dict(e)
+            e2["glob"] = self._remap_win_glob(e2["glob"] if not e2["glob"].startswith(VENDOR + "/**/*.asm") else "**/*.asm")
+            base_win.append(e2)
+        dnn_win = []
+        for e in self.rw_flags(CFGW, blk["features"]["dnn"]["flags"]):
+            e2 = dict(e)
+            e2["glob"] = self._remap_win_glob(
+                e2["glob"] if not e2["glob"].startswith(VENDOR + "/**/*.asm") else "**/*.asm", "wdnn")
+            dnn_win.append(e2)
+        # windows dnn sources -> stubs, written into DNN_SOURCES.txt
+        dnn_srcs = []
+        for g in blk["features"]["dnn"]["sources"]:
+            dnn_srcs += self.rw(CFGW, g)
+        for relstub in self.feat_stubs[CFGW].get("dnn", []):
+            dnn_srcs.append(f"gen/{self.where(CFGW, relstub)}/{relstub}")
+        dnn_files = self._expand_sources(CFGW, dnn_srcs)
+        stub_paths = []
+        for f in dnn_files:
+            rel, content = self._stub_for(f, "wdnn")
+            out = self.repo / "gen/windows" / rel
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(content.replace("\\n", "\n") if "\\n" in content else content)
+            stub_paths.append(f"gen/windows/{rel}")
+        (self.repo / "gen/windows/DNN_SOURCES.txt").write_text(
+            "\n".join(stub_paths) + ("\n" if stub_paths else ""))
+        print(f"windows dnn: {len(stub_paths)} stubs -> gen/windows/DNN_SOURCES.txt")
+        return base_win, dnn_win
 
     # ── INCLUDE_DIRS.txt (consumed by the repo build.mcpp) ───────────────
     def include_dirs(self, o):
@@ -367,8 +505,8 @@ class Port:
         # for when mcpp grows per-OS flags (issue filed).
         base_union = union_flags({o: apply_hoist(o, self.rw_flags(o, self.mcpp[o]["flags"]), HOIST)
                                   for o in ("linux", "macosx")})
-        (self.frag / "windows-flags-PARKED.toml").write_text(
-            self.emit_flag_entries("build.flags", self.rw_flags("windows", self.mcpp["windows"]["flags"])))
+        win_base_flags, win_dnn_flags = self.windows_stub_layer()
+        base_union = base_union + win_base_flags
         base = ["# [build].include_dirs additions (after \"include\"):",
                 "include_dirs = " + self.tarr(["include", "gen/common"] + glob_dirs), "",
                 "# base per-glob flags: union of the three OS tables (disjoint or identical):", "",
@@ -378,11 +516,14 @@ class Port:
         def emit_os_sections():
             for o in OSES:
                 blk = self.mcpp[o]
-                srcs = []
-                for g in blk["sources"]:
-                    srcs += self.rw(o, g)
-                for rel in self.base_stubs[o]:
-                    srcs.append(f"gen/{self.where(o, rel)}/{rel}")
+                if o == "windows":
+                    srcs = ["gen/windows/tu/w/**/*.{c,cc,cpp,asm}"]
+                else:
+                    srcs = []
+                    for g in blk["sources"]:
+                        srcs += self.rw(o, g)
+                    for rel in self.base_stubs[o]:
+                        srcs.append(f"gen/{self.where(o, rel)}/{rel}")
                 hoist_flags = []
                 for d in self.hoisted[o]:
                     if "-D" + d not in hoist_flags:
@@ -409,30 +550,29 @@ class Port:
             dnn_os[o] = lst
             assert feats["dnn"]["defines"] == ["HAVE_OPENCV_DNN"] or \
                 "HAVE_OPENCV_DNN" in feats["dnn"]["defines"], o
-        common = [e for e in dnn_os[OSES[0]] if all(e in dnn_os[o] for o in dnn_os)]
-        for o, lst in dnn_os.items():
-            extra = [e for e in lst if e not in common]
-            f = self.repo / "gen" / o / "DNN_SOURCES.txt"
-            f.write_text("\n".join(extra) + ("\n" if extra else ""))
-            print(f"dnn {o}: {len(common)} common + {len(extra)} per-OS -> gen/{o}/DNN_SOURCES.txt")
-        for o in OSES:
-            if o not in dnn_os:  # OS without dnn: empty list = feature off-limits there
+        # ALL dnn library sources live in the per-OS lists (windows needs its
+        # stub paths and the unix flag entries must never match windows TUs,
+        # so nothing dnn-library-shaped may sit in the global [features]
+        # sources). windows' list was already written by windows_stub_layer().
+        for o in ("linux", "macosx"):
+            if o not in dnn_os:
                 (self.repo / "gen" / o / "DNN_SOURCES.txt").write_text("")
+                continue
+            f = self.repo / "gen" / o / "DNN_SOURCES.txt"
+            f.write_text("\n".join(dnn_os[o]) + ("\n" if dnn_os[o] else ""))
+            print(f"dnn {o}: {len(dnn_os[o])} sources -> gen/{o}/DNN_SOURCES.txt")
 
         dnn_flags = union_flags({o: apply_hoist(o, self.rw_flags(o, self.mcpp[o]["features"]["dnn"]["flags"]), DNN_HOIST)
-                                 for o in dnn_os if o != "windows"})
-        if "windows" in dnn_os:
-            (self.frag / "windows-dnn-flags-PARKED.toml").write_text(
-                self.emit_flag_entries("features.dnn.flags",
-                                       self.rw_flags("windows", self.mcpp["windows"]["features"]["dnn"]["flags"])))
+                                 for o in dnn_os if o != "windows"}) + win_dnn_flags
         feats = ["[features]",
                  "unifont = { defines = [\"HAVE_UNIFONT\"] }", "",
                  "[features.dnn]",
                  "defines = " + self.tarr(["HAVE_OPENCV_DNN"], ""),
-                 "# OS-neutral dnn sources; per-OS ISA dispatch/mlas/stubs are injected by",
-                 "# build.mcpp from gen/<os>/DNN_SOURCES.txt (manifest [features] cannot be",
-                 "# per-OS - descriptor-only #253 semantics).",
-                 "sources = " + self.tarr(["src/dnn.cppm"] + common)]
+                 "# The dnn LIBRARY sources are per-OS by construction (windows compiles",
+                 "# them through its tu/w/ stub namespace so its per-glob flags can key on",
+                 "# the paths) -> ALL of them are injected by build.mcpp from",
+                 "# gen/<os>/DNN_SOURCES.txt; only the module interface lives here.",
+                 "sources = " + self.tarr(["src/dnn.cppm"])]
         feats.append("")
         feats.append(self.emit_flag_entries("features.dnn.flags", dnn_flags))
         (self.frag / "features.toml").write_text("\n".join(feats))

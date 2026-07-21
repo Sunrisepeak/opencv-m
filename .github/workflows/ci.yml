@@ -27,10 +27,10 @@ jobs:
   #   linux-musl  — green locally; blocked in CI on mcpp-index#110
   #                 (compat.ffmpeg -Wno-error=incompatible-pointer-types for
   #                 musl's ioctl signature). Flip to required when it merges.
-  #   windows     — parked on mcpp-community/mcpp#258 (the manifest cannot
-  #                 express windows' per-glob define deltas); build.mcpp
-  #                 fails fast with that pointer. gen/windows/ snapshots and
-  #                 the parked flag tables are already committed.
+  #   windows     — first CI outing of the gen/windows/tu/w*/ stub-namespace
+  #                 workaround for mcpp-community/mcpp#258 (windows per-glob
+  #                 flags keyed on windows-only stub paths); flip to required
+  #                 once proven green here.
   test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -82,7 +82,7 @@ jobs:
             experimental: false
             features: false
             examples: false
-          - name: windows (parked on mcpp#258)
+          - name: windows-llvm (experimental)
             os: windows-latest
             suffix: windows-x86_64
             ext: zip

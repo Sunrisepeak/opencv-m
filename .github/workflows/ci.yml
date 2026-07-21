@@ -162,16 +162,8 @@ jobs:
         shell: bash
         run: mcpp test --features dnn,unifont
 
-      - name: Run probe example (path-dep consumer)
-        if: matrix.examples
-        shell: bash
-        run: |
-          cd examples/probe
-          mcpp run
-
-      - name: Run gray_pipeline example
-        if: matrix.examples
-        shell: bash
-        run: |
-          cd examples/gray_pipeline
-          mcpp run
+      # NOTE examples are exercised locally, not here: each one is a path-dep
+      # consumer that cold-rebuilds the whole vendored OpenCV (+ffmpeg) in its
+      # own target/ (~40 min per example on a 4-core runner) while adding
+      # little over what `mcpp test` already covers. Revisit if mcpp learns
+      # to share dep artifacts with path-dep consumers.

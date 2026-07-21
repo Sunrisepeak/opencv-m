@@ -9,13 +9,22 @@
 //      and emitted as PRIVATE include dirs — consumers only ever need
 //      gen/common (opencv2/opencv_modules.hpp), which is declarative in
 //      [build].include_dirs.
-//   2. unifont: when the `unifont` feature is on, hex-embed the vendored
+//   2. per-OS dnn sources (feature-gated): [features.dnn] carries only the
+//      OS-neutral subset (no per-OS features in the manifest grammar); the
+//      per-OS remainder — ISA dispatch TUs, mlas, feature stubs — is listed
+//      in gen/<os>/DNN_SOURCES.txt and injected here.
+//   3. unifont: when the `unifont` feature is on, hex-embed the vendored
 //      assets/WenQuanYiMicroHei.ttf.gz into $MCPP_OUT_DIR/builtin_font_uni.h
 //      (symbol OcvBuiltinFontUni; byte-faithful port of cmake ocv_blob2hdr —
 //      the COMPRESSED bytes are embedded, OpenCV inflates at runtime).
 //
-// Raw `mcpp:` stdout protocol; diagnostics go to stdout as non-directive
-// lines (never stderr: it can interleave into the buffered directive stream).
+// Style: modules-first per docs/07 — directives and the env contract go
+// through `import mcpp;` (the module is bundled in the mcpp binary, so it
+// always matches the protocol; `import std;` is NOT part of the build.mcpp
+// contract). Textual std includes remain only for the file I/O this program
+// does itself, and MUST precede the import. Diagnostics go to stdout as
+// non-directive lines (never stderr: it can interleave into the buffered
+// directive stream).
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -25,7 +34,43 @@
 #include <string>
 #include <vector>
 
+import mcpp;
+
 namespace fs = std::filesystem;
+
+static std::string slurp(const fs::path& p) {
+    std::ifstream f(p, std::ios::binary);
+    if (!f) { std::printf("opencv-m build.mcpp: cannot read %s\n", p.string().c_str()); std::fflush(stdout); std::exit(1); }
+    std::ostringstream ss; ss << f.rdbuf(); return ss.str();
+}
+
+static void spew(const fs::path& p, const std::string& content) {
+    fs::create_directories(p.parent_path());
+    if (fs::exists(p)) {  // keep mtimes stable for unchanged outputs
+        std::ifstream f(p, std::ios::binary); std::ostringstream ss; ss << f.rdbuf();
+        if (ss.str() == content) return;
+    }
+    std::ofstream f(p, std::ios::binary);
+    f << content;
+    if (!f) { std::printf("opencv-m build.mcpp: cannot write %s\n", p.string().c_str()); std::fflush(stdout); std::exit(1); }
+}
+
+// byte-faithful port of cmake ocv_blob2hdr (same emission as the retired
+// compat.opencv descriptor): 16 bytes per line, ", " separators.
+static void blob2hdr(const fs::path& blob, const fs::path& hdr, const std::string& var) {
+    std::string data = slurp(blob);
+    std::ostringstream out;
+    out << "// Auto generated file.\nstatic const unsigned char " << var << "[] =\n{\n";
+    char buf[8];
+    for (size_t i = 0; i < data.size(); i++) {
+        std::snprintf(buf, sizeof buf, "0x%02x", (unsigned char)data[i]);
+        out << buf;
+        if (i + 1 != data.size()) out << ", ";
+        if (i % 16 == 15 && i + 1 != data.size()) out << "\n";
+    }
+    out << "\n};\n";
+    spew(hdr, out.str());
+}
 
 // DNN_SOURCES.txt entries may be {a,b}-brace globs or dir/*.ext patterns
 // (the '*' only ever sits in the filename position). Expand to plain files.
@@ -74,48 +119,23 @@ static std::vector<std::string> expand_glob_line(const fs::path& man, const std:
     return files;
 }
 
-static std::string slurp(const fs::path& p) {
-    std::ifstream f(p, std::ios::binary);
-    if (!f) { std::printf("opencv-m build.mcpp: cannot read %s\n", p.string().c_str()); std::fflush(stdout); std::exit(1); }
-    std::ostringstream ss; ss << f.rdbuf(); return ss.str();
-}
-
-static void spew(const fs::path& p, const std::string& content) {
-    fs::create_directories(p.parent_path());
-    if (fs::exists(p)) {  // keep mtimes stable for unchanged outputs
-        std::ifstream f(p, std::ios::binary); std::ostringstream ss; ss << f.rdbuf();
-        if (ss.str() == content) return;
-    }
-    std::ofstream f(p, std::ios::binary);
-    f << content;
-    if (!f) { std::printf("opencv-m build.mcpp: cannot write %s\n", p.string().c_str()); std::fflush(stdout); std::exit(1); }
-}
-
-// byte-faithful port of cmake ocv_blob2hdr (same emission as the retired
-// compat.opencv descriptor): 16 bytes per line, ", " separators.
-static void blob2hdr(const fs::path& blob, const fs::path& hdr, const std::string& var) {
-    std::string data = slurp(blob);
-    std::ostringstream out;
-    out << "// Auto generated file.\nstatic const unsigned char " << var << "[] =\n{\n";
-    char buf[8];
-    for (size_t i = 0; i < data.size(); i++) {
-        std::snprintf(buf, sizeof buf, "0x%02x", (unsigned char)data[i]);
-        out << buf;
-        if (i + 1 != data.size()) out << ", ";
-        if (i % 16 == 15 && i + 1 != data.size()) out << "\n";
-    }
-    out << "\n};\n";
-    spew(hdr, out.str());
-}
-
 int main() {
-    const char* man_env = std::getenv("MCPP_MANIFEST_DIR");
-    fs::path man = man_env ? man_env : ".";
+    fs::path man = mcpp::manifest_dir()[0] ? mcpp::manifest_dir() : ".";
 
     // 1. per-OS include dirs
-    const char* os_env = std::getenv("MCPP_TARGET_OS");
-    std::string os = os_env ? os_env : "linux";
+    std::string os = mcpp::target_os()[0] ? mcpp::target_os() : "linux";
     if (os == "macos") os = "macosx";  // gen/ keeps the descriptor-era dir name
+    if (os == "windows") {
+        // gen/windows/ snapshots are committed and ready, but the manifest
+        // cannot express windows' per-glob define deltas (WIN32/_CRT_* adds +
+        // unix HAVE_* removals on the same globs) until mcpp grows
+        // [target.'cfg(os)'] per-glob flags — mcpp-community/mcpp#258. The
+        // ported windows flag tables are parked in the port fragments.
+        std::printf("opencv-m build.mcpp: windows leg parked on mcpp-community/mcpp#258 "
+                    "(manifest per-OS per-glob flags)\n");
+        std::fflush(stdout);
+        return 1;
+    }
     std::string listrel = "gen/" + os + "/INCLUDE_DIRS.txt";
     std::ifstream list(man / listrel);
     if (!list) {
@@ -128,17 +148,12 @@ int main() {
     while (std::getline(list, line)) {
         while (!line.empty() && (line.back() == '\r' || line.back() == ' ')) line.pop_back();
         if (line.empty() || line[0] == '#') continue;
-        std::printf("mcpp:include-dir=%s\n", line.c_str());
+        mcpp::include_dir(line.c_str());
     }
-    std::printf("mcpp:rerun-if-changed=%s\n", listrel.c_str());
+    mcpp::rerun_if_changed(listrel.c_str());
 
-    // 2. per-OS dnn sources (feature-gated): the manifest's [features.dnn]
-    //    carries only the OS-neutral subset (no per-OS features in manifest
-    //    grammar); the per-OS remainder — ISA dispatch TUs, mlas, feature
-    //    stubs — is listed in gen/<os>/DNN_SOURCES.txt (port-generated) and
-    //    injected here. Entries may be brace-globs: mcpp:source= takes
-    //    single files, so expand ourselves against the repo tree.
-    if (std::getenv("MCPP_FEATURE_DNN")) {
+    // 2. per-OS dnn sources (feature-gated)
+    if (mcpp::has_feature("dnn")) {
         std::string dnnrel = "gen/" + os + "/DNN_SOURCES.txt";
         std::ifstream dl(man / dnnrel);
         if (dl) {
@@ -148,23 +163,22 @@ int main() {
                 while (!dline.empty() && (dline.back() == '\r' || dline.back() == ' ')) dline.pop_back();
                 if (dline.empty() || dline[0] == '#') continue;
                 for (const std::string& one : expand_glob_line(man, dline)) {
-                    std::printf("mcpp:source=%s\n", one.c_str());
+                    mcpp::source(one.c_str());
                     injected++;
                 }
             }
-            std::printf("mcpp:rerun-if-changed=%s\n", dnnrel.c_str());
+            mcpp::rerun_if_changed(dnnrel.c_str());
             std::printf("opencv-m build.mcpp: %d dnn per-OS sources injected\n", injected);
         }
     }
 
     // 3. unifont embed (feature-gated)
-    if (std::getenv("MCPP_FEATURE_UNIFONT")) {
-        const char* out_env = std::getenv("MCPP_OUT_DIR");
-        if (!out_env) { std::printf("opencv-m build.mcpp: MCPP_OUT_DIR unset\n"); std::fflush(stdout); return 1; }
-        fs::path out = out_env;
+    if (mcpp::has_feature("unifont")) {
+        if (!mcpp::out_dir()[0]) { std::printf("opencv-m build.mcpp: MCPP_OUT_DIR unset\n"); std::fflush(stdout); return 1; }
+        fs::path out = mcpp::out_dir();
         blob2hdr(man / "assets/WenQuanYiMicroHei.ttf.gz", out / "builtin_font_uni.h", "OcvBuiltinFontUni");
-        std::printf("mcpp:include-dir=%s\n", out.string().c_str());
-        std::printf("mcpp:rerun-if-changed=assets/WenQuanYiMicroHei.ttf.gz\n");
+        mcpp::include_dir(out.string().c_str());
+        mcpp::rerun_if_changed("assets/WenQuanYiMicroHei.ttf.gz");
         std::printf("opencv-m build.mcpp: unifont embedded\n");
     }
 

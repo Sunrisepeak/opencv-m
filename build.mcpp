@@ -16,14 +16,63 @@
 //
 // Raw `mcpp:` stdout protocol; diagnostics go to stdout as non-directive
 // lines (never stderr: it can interleave into the buffered directive stream).
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace fs = std::filesystem;
+
+// DNN_SOURCES.txt entries may be {a,b}-brace globs or dir/*.ext patterns
+// (the '*' only ever sits in the filename position). Expand to plain files.
+static void expand_braces(const std::string& pat, std::vector<std::string>& out) {
+    auto l = pat.find('{');
+    if (l == std::string::npos) { out.push_back(pat); return; }
+    auto r = pat.find('}', l);
+    if (r == std::string::npos) { out.push_back(pat); return; }
+    std::string head = pat.substr(0, l), tail = pat.substr(r + 1);
+    std::string inner = pat.substr(l + 1, r - l - 1);
+    size_t start = 0;
+    while (true) {
+        auto c = inner.find(',', start);
+        expand_braces(head + inner.substr(start, c == std::string::npos
+                                                     ? std::string::npos : c - start) + tail, out);
+        if (c == std::string::npos) break;
+        start = c + 1;
+    }
+}
+
+static std::vector<std::string> expand_glob_line(const fs::path& man, const std::string& line) {
+    std::vector<std::string> pats, files;
+    expand_braces(line, pats);
+    for (const auto& p : pats) {
+        if (p.find('*') == std::string::npos) { files.push_back(p); continue; }
+        fs::path rel(p);
+        std::string fname = rel.filename().string();      // "*.cpp" / "*.S"
+        if (fname.empty() || fname[0] != '*') {
+            std::printf("opencv-m build.mcpp: unsupported glob '%s'\n", p.c_str());
+            std::fflush(stdout);
+            std::exit(1);
+        }
+        std::string suffix = fname.substr(1);
+        std::error_code ec;
+        std::vector<std::string> hits;
+        for (auto& e : fs::directory_iterator(man / rel.parent_path(), ec)) {
+            if (!e.is_regular_file()) continue;
+            std::string n = e.path().filename().string();
+            if (n.size() > suffix.size()
+                && n.compare(n.size() - suffix.size(), suffix.size(), suffix) == 0)
+                hits.push_back((rel.parent_path() / n).generic_string());
+        }
+        std::sort(hits.begin(), hits.end());
+        files.insert(files.end(), hits.begin(), hits.end());
+    }
+    return files;
+}
 
 static std::string slurp(const fs::path& p) {
     std::ifstream f(p, std::ios::binary);
@@ -83,7 +132,32 @@ int main() {
     }
     std::printf("mcpp:rerun-if-changed=%s\n", listrel.c_str());
 
-    // 2. unifont embed (feature-gated)
+    // 2. per-OS dnn sources (feature-gated): the manifest's [features.dnn]
+    //    carries only the OS-neutral subset (no per-OS features in manifest
+    //    grammar); the per-OS remainder — ISA dispatch TUs, mlas, feature
+    //    stubs — is listed in gen/<os>/DNN_SOURCES.txt (port-generated) and
+    //    injected here. Entries may be brace-globs: mcpp:source= takes
+    //    single files, so expand ourselves against the repo tree.
+    if (std::getenv("MCPP_FEATURE_DNN")) {
+        std::string dnnrel = "gen/" + os + "/DNN_SOURCES.txt";
+        std::ifstream dl(man / dnnrel);
+        if (dl) {
+            int injected = 0;
+            std::string dline;
+            while (std::getline(dl, dline)) {
+                while (!dline.empty() && (dline.back() == '\r' || dline.back() == ' ')) dline.pop_back();
+                if (dline.empty() || dline[0] == '#') continue;
+                for (const std::string& one : expand_glob_line(man, dline)) {
+                    std::printf("mcpp:source=%s\n", one.c_str());
+                    injected++;
+                }
+            }
+            std::printf("mcpp:rerun-if-changed=%s\n", dnnrel.c_str());
+            std::printf("opencv-m build.mcpp: %d dnn per-OS sources injected\n", injected);
+        }
+    }
+
+    // 3. unifont embed (feature-gated)
     if (std::getenv("MCPP_FEATURE_UNIFONT")) {
         const char* out_env = std::getenv("MCPP_OUT_DIR");
         if (!out_env) { std::printf("opencv-m build.mcpp: MCPP_OUT_DIR unset\n"); std::fflush(stdout); return 1; }

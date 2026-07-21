@@ -1,0 +1,7 @@
+third_party/opencv-5.0.0/3rdparty/mlas/lib/*.cpp
+third_party/opencv-5.0.0/3rdparty/mlas/lib/aarch64/*.S
+gen/common/modules/dnn/int8layers/layers_common.neon.cpp
+gen/common/modules/dnn/layers/layers_common.neon.cpp
+gen/common/modules/dnn/layers/cpu_kernels/{activation_kernels.neon,conv2_depthwise.neon,conv2_kernels.neon,conv_block.neon,conv_block.neon_fp16,conv_winograd_f63.neon,fast_gemm_kernels.neon,gridsample_kernels.neon,nary_eltwise_kernels.neon,reduce2_kernels.neon,transpose_kernels.neon}.cpp
+gen/common/mlas_hgemm_stub.cpp
+gen/macosx/tu/mlasgemm/mlasgemm_modules_dnn_src_layers_cpu_kernels_mlas_threading.cpp

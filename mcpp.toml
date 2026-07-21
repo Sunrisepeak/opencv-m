@@ -9,9 +9,16 @@ license     = "MIT"
 # see .agents/docs/2026-07-21-vendor-single-repo-plan.md):
 #   third_party/opencv-5.0.0/  pinned upstream source (zero patches)
 #   gen/common, gen/<os>/      frozen config snapshots as real files
-#   build.mcpp                 per-OS include dirs + unifont embed only
+#   build.mcpp                 per-OS include dirs + per-OS dnn sources
+#                              (gen/<os>/DNN_SOURCES.txt) + unifont embed
 # Per-glob defines below scope __OPENCV_BUILD-family flags to third_party/**
-# and gen/** TUs — src/*.cppm module-layer TUs never see them.
+# and gen/** TUs — src/*.cppm module-layer TUs never see them. The flag table
+# is the UNION of the linux+macosx snapshots (identical or disjoint globs;
+# arch-specific per-glob defines are hoisted to per-OS cflags below, each name
+# grep-verified to be read only by its own group). WINDOWS is parked: it needs
+# DIFFERENT defines on the SAME globs (WIN32/_CRT_* adds + unix HAVE_* drops),
+# which the manifest cannot express until mcpp grows [target.'cfg(os)'] flags
+# (issue filed; parked tables in the port fragments).
 # ─────────────────────────────────────────────────────────────────────────────
 
 [build]
@@ -68,7 +75,6 @@ defines = [
     "HAVE_STDARG_H=1",
     "HAVE_UNISTD_H=1",
     "NDEBUG",
-    "OPENCV_ALLOCATOR_STATS_COUNTER_TYPE=long long",
     "_USE_MATH_DEFINES",
     "__OPENCV_BUILD=1",
     "__STDC_CONSTANT_MACROS",
@@ -172,14 +178,12 @@ defines = [
     "HAVE_STDARG_H=1",
     "HAVE_UNISTD_H=1",
     "NDEBUG",
-    "PNG_INTEL_SSE_OPT=1",
 ]
 
 [[build.flags]]
 glob = "**/modules/videoio/**"
 defines = [
     "ENABLE_PLUGINS",
-    "HAVE_CAMV4L2",
     "HAVE_FFMPEG",
     "HAVE_FFMPEG_LIBAVDEVICE",
     "NDEBUG",
@@ -406,8 +410,6 @@ defines = [
 [[build.flags]]
 glob = "third_party/opencv-5.0.0/modules/core/src/alloc.cpp"
 defines = [
-    "HAVE_MALLOC_H=1",
-    "HAVE_MEMALIGN=1",
     "HAVE_POSIX_MEMALIGN=1",
 ]
 
@@ -423,14 +425,38 @@ defines = [
     "HAVE_GETAUXVAL=1",
 ]
 
+[[build.flags]]
+glob = "gen/common/modules/core/transpose.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[build.flags]]
+glob = "gen/common/modules/imgproc/warp_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
 [target.'cfg(linux)'.build]
 cflags   = [
     "-msse3",
     "-w",
+    "-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=long long",
+    "-DPNG_INTEL_SSE_OPT=1",
+    "-DHAVE_CAMV4L2",
+    "-DHAVE_MALLOC_H=1",
+    "-DHAVE_MEMALIGN=1",
+    "-DHAVE_FLATBUFFERS=1",
 ]
 cxxflags = [
     "-msse3",
     "-w",
+    "-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=long long",
+    "-DPNG_INTEL_SSE_OPT=1",
+    "-DHAVE_CAMV4L2",
+    "-DHAVE_MALLOC_H=1",
+    "-DHAVE_MEMALIGN=1",
+    "-DHAVE_FLATBUFFERS=1",
 ]
 ldflags  = [
     "-lpthread",
@@ -528,6 +554,94 @@ sources  = [
         "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jutils.c",
     ]
 
+[target.'cfg(macos)'.build]
+cflags   = [
+    "-w",
+    "-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=int",
+    "-DHAVE_STDARG_H=1",
+    "-DHAVE_UNISTD_H=1",
+    "-DNEON_INTRINSICS",
+    "-DPNG_ARM_NEON_OPT=2",
+]
+cxxflags = [
+    "-w",
+    "-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=int",
+    "-DHAVE_STDARG_H=1",
+    "-DHAVE_UNISTD_H=1",
+    "-DNEON_INTRINSICS",
+    "-DPNG_ARM_NEON_OPT=2",
+]
+ldflags  = [
+    "-lpthread",
+    "-ldl",
+]
+sources  = [
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/arm/{jccolor-neon,jcgray-neon,jcphuff-neon,jcsample-neon,jdcolor-neon,jdmerge-neon,jdsample-neon,jfdctfst-neon,jfdctint-neon,jidctfst-neon,jidctint-neon,jidctred-neon,jquanti-neon}.c",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/simd/arm/aarch64/{jchuff-neon,jsimd}.c",
+        "third_party/opencv-5.0.0/3rdparty/libjpeg-turbo/src/{jaricom,jcapimin,jcapistd,jcarith,jccoefct,jccolor,jcdctmgr,jcdiffct,jchuff,jcicc,jcinit,jclhuff,jclossls,jcmainct,jcmarker,jcmaster,jcomapi,jcparam,jcphuff,jcprepct,jcsample,jctrans,jdapimin,jdapistd,jdarith,jdatadst,jdatasrc,jdcoefct,jdcolor,jddctmgr,jddiffct,jdhuff,jdicc,jdinput,jdlhuff,jdlossls,jdmainct,jdmarker,jdmaster,jdmerge,jdphuff,jdpostct,jdsample,jdtrans,jerror,jfdctflt,jfdctfst,jfdctint,jidctflt,jidctfst,jidctint,jidctred,jmemmgr,jmemnobs,jpeg_nbits,jquant1,jquant2,jutils}.c",
+        "third_party/opencv-5.0.0/3rdparty/libpng/*.c",
+        "third_party/opencv-5.0.0/3rdparty/libpng/arm/filter_neon.S",
+        "third_party/opencv-5.0.0/3rdparty/libpng/arm/*.c",
+        "third_party/opencv-5.0.0/3rdparty/zlib/*.c",
+        "third_party/opencv-5.0.0/modules/core/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/core/src/opencl/runtime/*.cpp",
+        "third_party/opencv-5.0.0/modules/core/src/parallel/*.cpp",
+        "third_party/opencv-5.0.0/modules/core/src/utils/*.cpp",
+        "third_party/opencv-5.0.0/modules/flann/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/geometry/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/geometry/src/ptcloud/*.cpp",
+        "third_party/opencv-5.0.0/modules/geometry/src/usac/*.cpp",
+        "third_party/opencv-5.0.0/modules/highgui/src/{backend,roiSelector,window}.cpp",
+        "third_party/opencv-5.0.0/modules/imgcodecs/src/*.cpp",
+        "third_party/opencv-5.0.0/modules/imgproc/src/{accum,accum.dispatch,bilateral_filter.dispatch,blend,box_filter.dispatch,canny,clahe,color,color_hsv.dispatch,color_lab,color_rgb.dispatch,color_yuv.dispatch,colormap,connectedcomponents,contours_approx,contours_common,contours_link,contours_new,contours_truco,corner,cornersubpix,demosaicing,deriv,distransform,drawing,drawing_text,emd_new,filter.dispatch,fisheye,floodfill,gabor,generalized_hough,grabcut,histogram,hough,imgwarp,lsd,main,median_blur.dispatch,morph.dispatch,phasecorr,phasecorr_iterative,pyramids,resize,samplers,segmentation,smooth.dispatch,spatialgradient,stackblur,stb_truetype,sumpixels.dispatch,tables,templmatch,thresh,undistort.dispatch,utils}.cpp",
+        "third_party/opencv-5.0.0/modules/videoio/src/{backend_plugin,backend_static,cap,cap_ffmpeg,cap_images,cap_mjpeg_decoder,cap_mjpeg_encoder,container_avi,videoio_registry}.cpp",
+        "gen/common/modules/core/transpose.neon.cpp",
+        "gen/common/modules/imgproc/warp_kernels.neon.cpp",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcapistd.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jccolor.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcdiffct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jclossls.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcmainct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcprepct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcsample.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdapistd.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdcolor.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jddiffct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdlossls.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdmainct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdpostct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdsample.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jutils.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jccoefct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jcdctmgr.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdcoefct.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jddctmgr.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jdmerge.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jfdctfst.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jfdctint.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctflt.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctfst.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctint.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jidctred.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jquant1.c",
+        "gen/common/tu/jpeg12/jpeg12_3rdparty_libjpeg-turbo_src_jquant2.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcapistd.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jccolor.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcdiffct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jclossls.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcmainct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcprepct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jcsample.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdapistd.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdcolor.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jddiffct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdlossls.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdmainct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdpostct.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdsample.c",
+        "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jutils.c",
+    ]
+
 
 [dependencies]
 # FFmpeg videoio backend — stays a compat package (separate unification
@@ -544,10 +658,11 @@ unifont = { defines = ["HAVE_UNIFONT"] }
 defines = [
     "HAVE_OPENCV_DNN",
 ]
+# OS-neutral dnn sources; per-OS ISA dispatch/mlas/stubs are injected by
+# build.mcpp from gen/<os>/DNN_SOURCES.txt (manifest [features] cannot be
+# per-OS - descriptor-only #253 semantics).
 sources = [
         "src/dnn.cppm",
-        "third_party/opencv-5.0.0/3rdparty/mlas/lib/*.cpp",
-        "third_party/opencv-5.0.0/3rdparty/mlas/lib/x86_64/*.S",
         "third_party/opencv-5.0.0/3rdparty/protobuf/src/google/protobuf/*.cc",
         "third_party/opencv-5.0.0/3rdparty/protobuf/src/google/protobuf/io/*.cc",
         "third_party/opencv-5.0.0/3rdparty/protobuf/src/google/protobuf/stubs/*.cc",
@@ -563,18 +678,12 @@ sources = [
         "third_party/opencv-5.0.0/modules/dnn/src/tensorflow/*.cpp",
         "third_party/opencv-5.0.0/modules/dnn/src/tflite/tflite_importer.cpp",
         "third_party/opencv-5.0.0/modules/dnn/src/tokenizer/*.cpp",
-        "gen/common/modules/dnn/int8layers/{conv2_int8_kernels.avx2,layers_common.avx2,layers_common.avx512_skx}.cpp",
-        "gen/common/modules/dnn/layers/{layers_common.avx,layers_common.avx2,layers_common.avx512_skx}.cpp",
-        "gen/common/modules/dnn/layers/cpu_kernels/{activation_kernels.avx,activation_kernels.avx2,conv2_depthwise.avx,conv2_depthwise.avx2,conv2_kernels.avx,conv2_kernels.avx2,conv_block.avx,conv_block.avx2,conv_depthwise.avx,conv_depthwise.avx2,conv_winograd_f63.avx,conv_winograd_f63.avx2,fast_gemm_kernels.avx,fast_gemm_kernels.avx2,gridsample_kernels.avx,gridsample_kernels.avx2,nary_eltwise_kernels.avx,nary_eltwise_kernels.avx2,reduce2_kernels.avx,reduce2_kernels.avx2,transpose_kernels.avx,transpose_kernels.avx2}.cpp",
-        "gen/common/mlas_hgemm_stub.cpp",
-        "gen/linux/tu/mlasgemm/mlasgemm_modules_dnn_src_layers_cpu_kernels_mlas_threading.cpp",
     ]
 
 [[features.dnn.flags]]
 glob = "**/modules/dnn/**"
 defines = [
     "ENABLE_PLUGINS",
-    "HAVE_FLATBUFFERS=1",
     "HAVE_MLAS=1",
     "HAVE_PROTOBUF=1",
     "NDEBUG",
@@ -701,6 +810,84 @@ glob = "third_party/opencv-5.0.0/3rdparty/mlas/lib/platform.cpp"
 cxxflags = [
     "-include",
     "unistd.h",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/int8layers/layers_common.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/activation_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/conv2_depthwise.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/conv2_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/conv_block.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/conv_block.neon_fp16.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON_FP16",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/conv_winograd_f63.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/fast_gemm_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/gridsample_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/nary_eltwise_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/reduce2_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/cpu_kernels/transpose_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[features.dnn.flags]]
+glob = "gen/common/modules/dnn/layers/layers_common.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
 ]
 
 # musl leg: mcpp build --target x86_64-linux-musl (toolchain resolved from the

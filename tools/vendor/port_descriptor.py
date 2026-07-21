@@ -275,58 +275,176 @@ class Port:
         return "\n".join(out)
 
     def fragments(self):
-        self.frag.mkdir(parents=True, exist_ok=True)
-        lin = self.mcpp["linux"]
+        """Emit paste-ready TOML fragments for ALL THREE OS legs.
 
-        # base.toml: global include_dirs (linux order; tarball dirs are
-        # OS-neutral — assert other OS blocks don't add tarball dirs linux lacks)
+        - base.toml: global include_dirs + the UNION of the per-OS per-glob
+          flag tables (same glob + identical payload across the OSes that
+          carry it -> one entry; a same-glob conflict aborts with a report).
+        - <os>.toml: [target.'cfg(<os>)'.build] cflags/cxxflags/ldflags/
+          sources (+ that OS's base tu stubs).
+        - features.toml: [features] with the OS-NEUTRAL dnn subset (entries
+          whose rewritten path is identical for every OS that has dnn) +
+          unified dnn flag table; the per-OS remainder (ISA dispatch TUs,
+          mlas, feature-gated stubs) goes to gen/<os>/DNN_SOURCES.txt, which
+          build.mcpp injects via mcpp:source= when the feature is active.
+        """
+        self.frag.mkdir(parents=True, exist_ok=True)
+        CFG = {"linux": "linux", "macosx": "macos", "windows": "windows"}
+
+        # global include dirs (also writes gen/<os>/INCLUDE_DIRS.txt)
         glob_dirs = self.include_dirs("linux")
         for o in ("macosx", "windows"):
             extra = set(self.include_dirs(o)) - set(glob_dirs)
             if extra:
                 print(f"NOTE: {o} adds tarball include_dirs not in linux: {sorted(extra)}")
+
+        # Per-OS per-glob define deltas that the manifest cannot express are
+        # HOISTED to that OS's global cflags/cxxflags: each define name below
+        # is read ONLY by the code group it came from (grep-verified against
+        # the vendored tree), so package-global scope on that OS is
+        # behavior-identical. Windows is NOT hoistable this way (it needs
+        # REMOVALS of unix defines on shared globs) — parked on the mcpp
+        # per-OS-flags issue.
+        HOIST = {
+            ("linux",  "**/modules/core/**"): ["OPENCV_ALLOCATOR_STATS_COUNTER_TYPE=long long"],
+            ("linux",  "**/3rdparty/libpng/**"): ["PNG_INTEL_SSE_OPT=1"],
+            ("linux",  "**/modules/videoio/**"): ["HAVE_CAMV4L2"],
+            ("linux",  VENDOR + "/modules/core/src/alloc.cpp"): ["HAVE_MALLOC_H=1", "HAVE_MEMALIGN=1"],
+            ("macosx", "**/modules/core/**"): ["OPENCV_ALLOCATOR_STATS_COUNTER_TYPE=int"],
+            ("macosx", "**/modules/highgui/**"): ["HAVE_STDARG_H=1", "HAVE_UNISTD_H=1"],
+            ("macosx", "**/3rdparty/libjpeg-turbo/**"): ["NEON_INTRINSICS"],
+            ("macosx", "**/tu/jpeg12/**"): ["NEON_INTRINSICS"],
+            ("macosx", "**/tu/jpeg16/**"): ["NEON_INTRINSICS"],
+            ("macosx", "**/3rdparty/libpng/**"): ["PNG_ARM_NEON_OPT=2"],
+        }
+        DNN_HOIST = {
+            ("linux",  "**/modules/dnn/**"): ["HAVE_FLATBUFFERS=1"],
+        }
+        self.hoisted = {o: [] for o in OSES}
+
+        def apply_hoist(o, entries, table):
+            out = []
+            for e in entries:
+                key = (o, e["glob"])
+                if key in table:
+                    e = dict(e)
+                    defs = list(e.get("defines") or [])
+                    for d in table[key]:
+                        assert d in defs, (key, d)
+                        defs.remove(d)
+                        self.hoisted[o].append(d)
+                    e["defines"] = defs
+                out.append(e)
+            return out
+
+        def union_flags(per_os):
+            """per_os: {os: [entry,...]} rewritten. Returns ordered union."""
+            out, seen = [], {}
+            conflicts = []
+            for o in OSES:
+                for e in per_os.get(o, []):
+                    key = e["glob"]
+                    body = {k: e.get(k) for k in ("cflags", "cxxflags", "asmflags", "defines")}
+                    if key in seen:
+                        if seen[key] != body:
+                            conflicts.append((key, o, seen[key], body))
+                    else:
+                        seen[key] = body
+                        out.append(e)
+            if conflicts:
+                for c in conflicts:
+                    print("FLAG CONFLICT:", c[0], "in", c[1])
+                    print("  first:", c[2])
+                    print("  other:", c[3])
+                raise SystemExit("cross-OS per-glob flag conflicts — resolve before emitting")
+            return out
+
+        # Windows per-glob flags CANNOT be expressed today: the manifest has
+        # no [target.'cfg(os)'.build] flags key (descriptor-only #253
+        # semantics), and windows needs different defines on the SAME globs
+        # (WIN32/_CRT_* adds, unix HAVE_* removals). Union linux+macosx
+        # (verified conflict-free); park the windows table in the fragments
+        # for when mcpp grows per-OS flags (issue filed).
+        base_union = union_flags({o: apply_hoist(o, self.rw_flags(o, self.mcpp[o]["flags"]), HOIST)
+                                  for o in ("linux", "macosx")})
+        (self.frag / "windows-flags-PARKED.toml").write_text(
+            self.emit_flag_entries("build.flags", self.rw_flags("windows", self.mcpp["windows"]["flags"])))
         base = ["# [build].include_dirs additions (after \"include\"):",
                 "include_dirs = " + self.tarr(["include", "gen/common"] + glob_dirs), "",
-                "# base per-glob flags (linux block, order preserved — last wins):", "",
-                self.emit_flag_entries("build.flags", self.rw_flags("linux", lin["flags"]))]
+                "# base per-glob flags: union of the three OS tables (disjoint or identical):", "",
+                self.emit_flag_entries("build.flags", base_union)]
         (self.frag / "base.toml").write_text("\n".join(base))
 
-        # linux.toml: cfg(linux) build section
-        srcs = []
-        for g in lin["sources"]:
-            srcs += self.rw("linux", g)
-        for rel in self.base_stubs["linux"]:
-            srcs.append(f"gen/{self.where('linux', rel)}/{rel}")
-        body = ["[target.'cfg(linux)'.build]",
-                "cflags   = " + self.tarr(lin["cflags"], ""),
-                "cxxflags = " + self.tarr(lin["cxxflags"], ""),
-                "ldflags  = " + self.tarr(lin["ldflags"], ""),
-                "sources  = " + self.tarr(srcs), ""]
-        (self.frag / "linux.toml").write_text("\n".join(body))
+        def emit_os_sections():
+            for o in OSES:
+                blk = self.mcpp[o]
+                srcs = []
+                for g in blk["sources"]:
+                    srcs += self.rw(o, g)
+                for rel in self.base_stubs[o]:
+                    srcs.append(f"gen/{self.where(o, rel)}/{rel}")
+                hoist_flags = []
+                for d in self.hoisted[o]:
+                    if "-D" + d not in hoist_flags:
+                        hoist_flags.append("-D" + d)
+                body = [f"[target.'cfg({CFG[o]})'.build]",
+                        "cflags   = " + self.tarr(blk["cflags"] + hoist_flags, ""),
+                        "cxxflags = " + self.tarr(blk["cxxflags"] + hoist_flags, ""),
+                        "ldflags  = " + self.tarr(blk.get("ldflags", []), ""),
+                        "sources  = " + self.tarr(srcs), ""]
+                (self.frag / f"{o}.toml").write_text("\n".join(body))
 
-        # features.toml: neutral unifont + per-OS dnn (linux leg only for now)
+        # dnn feature: OS-neutral subset in the manifest, per-OS remainder in
+        # gen/<os>/DNN_SOURCES.txt (build.mcpp injects when the feature is on)
+        dnn_os = {}
+        for o in OSES:
+            feats = self.mcpp[o].get("features", {})
+            if "dnn" not in feats:
+                continue
+            lst = []
+            for g in feats["dnn"]["sources"]:
+                lst += self.rw(o, g)
+            for rel in self.feat_stubs[o].get("dnn", []):
+                lst.append(f"gen/{self.where(o, rel)}/{rel}")
+            dnn_os[o] = lst
+            assert feats["dnn"]["defines"] == ["HAVE_OPENCV_DNN"] or \
+                "HAVE_OPENCV_DNN" in feats["dnn"]["defines"], o
+        common = [e for e in dnn_os[OSES[0]] if all(e in dnn_os[o] for o in dnn_os)]
+        for o, lst in dnn_os.items():
+            extra = [e for e in lst if e not in common]
+            f = self.repo / "gen" / o / "DNN_SOURCES.txt"
+            f.write_text("\n".join(extra) + ("\n" if extra else ""))
+            print(f"dnn {o}: {len(common)} common + {len(extra)} per-OS -> gen/{o}/DNN_SOURCES.txt")
+        for o in OSES:
+            if o not in dnn_os:  # OS without dnn: empty list = feature off-limits there
+                (self.repo / "gen" / o / "DNN_SOURCES.txt").write_text("")
+
+        dnn_flags = union_flags({o: apply_hoist(o, self.rw_flags(o, self.mcpp[o]["features"]["dnn"]["flags"]), DNN_HOIST)
+                                 for o in dnn_os if o != "windows"})
+        if "windows" in dnn_os:
+            (self.frag / "windows-dnn-flags-PARKED.toml").write_text(
+                self.emit_flag_entries("features.dnn.flags",
+                                       self.rw_flags("windows", self.mcpp["windows"]["features"]["dnn"]["flags"])))
         feats = ["[features]",
                  "unifont = { defines = [\"HAVE_UNIFONT\"] }", "",
                  "[features.dnn]",
-                 "defines = " + self.tarr(lin["features"]["dnn"]["defines"], "")]
-        dnn_srcs = ["src/dnn.cppm"]
-        for g in lin["features"]["dnn"]["sources"]:
-            dnn_srcs += self.rw("linux", g)
-        for feat, rels in self.feat_stubs["linux"].items():
-            assert feat == "dnn", feat
-            dnn_srcs += [f"gen/{self.where('linux', r)}/{r}" for r in rels]
-        feats.append("sources = " + self.tarr(dnn_srcs))
+                 "defines = " + self.tarr(["HAVE_OPENCV_DNN"], ""),
+                 "# OS-neutral dnn sources; per-OS ISA dispatch/mlas/stubs are injected by",
+                 "# build.mcpp from gen/<os>/DNN_SOURCES.txt (manifest [features] cannot be",
+                 "# per-OS - descriptor-only #253 semantics).",
+                 "sources = " + self.tarr(["src/dnn.cppm"] + common)]
         feats.append("")
-        feats.append(self.emit_flag_entries(
-            "features.dnn.flags", self.rw_flags("linux", lin["features"]["dnn"]["flags"])))
+        feats.append(self.emit_flag_entries("features.dnn.flags", dnn_flags))
         (self.frag / "features.toml").write_text("\n".join(feats))
 
-        # record the neutral segment for the mcpp.toml author
+        emit_os_sections()
+
+        # record the neutral segment + deps for the mcpp.toml author
         neutral = {k: v for k, v in self.mcpp.items() if k not in OSES}
-        neutral.pop("features", None)  # unifont handled above (dep dropped: blob vendored)
+        neutral.pop("features", None)
         (self.frag / "neutral.json").write_text(json.dumps(neutral, indent=2))
-        # deps must be identical across OS blocks to stay a global [dependencies]
         deps = {o: self.mcpp[o].get("deps") for o in OSES}
+        assert len({json.dumps(d, sort_keys=True) for d in deps.values()}) == 1, deps
         (self.frag / "deps.json").write_text(json.dumps(deps, indent=2))
         print("fragments written to", self.frag)
 

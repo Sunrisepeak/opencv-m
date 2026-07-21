@@ -14,7 +14,7 @@
 ## 核心特性
 
 - **纯模块导入** — `import opencv.cv;`,消费者代码零 `#include`,用的仍是你熟悉的 `cv::` API 与习惯
-- **从源码构建,消费端不跑 CMake** — [`compat.opencv`](https://github.com/mcpp-community/mcpp-index) 携带冻结配置快照 + 内嵌 `build.mcpp`,mcpp 直接编译整套 OpenCV 5.0.0(含 NASM SIMD,**运行时 dispatch 保留**),videoio 的 FFmpeg 后端由 `compat.ffmpeg` 透传闭合;本仓库只是薄薄的模块层
+- **从源码构建,消费端不跑 CMake** — OpenCV 5.0.0 源码 vendored 在 `third_party/`,冻结配置快照是 `gen/` 下的真实文件,mcpp 按本仓库 `mcpp.toml` 直接编译整套 OpenCV(含 NASM SIMD,**运行时 dispatch 保留**),videoio 的 FFmpeg 后端由 `compat.ffmpeg` 闭合;单仓库承载模块层 + 完整构建
 - **三平台全功能** — Linux / macOS / Windows 三平台 CI,每个平台都带 imgcodecs(PNG+JPEG)、videoio(FFmpeg `cap_ffmpeg`)与可选 dnn(`import opencv.cv/dnn` 三平台齐);dnn 各平台自适应 gemm 后端(x86 mlas/AVX、arm mlas/NEON、windows 内置 fast_gemm)
 - **特性可插拔** — `features = ["dnn"]` 解锁 `import opencv.dnn;` 深度学习模块;`unifont` 解锁 Unicode/CJK `putText`
 
@@ -86,11 +86,11 @@ cd examples/gray_pipeline && mcpp run -- input.png
 
 ## 工具链与运行时
 
-包不固定工具链(mcpp 解析环境默认)。上游 OpenCV 源码**不 vendored**,经 `compat.opencv` 索引包(官方 GitHub tag tarball,GLOBAL + CN 镜像,sha256 锁定)到达消费端;描述符与生成流水线在 mcpp-index(`tools/compat-opencv/`)。运算符与命名自由函数的 `static inline` 表面无法跨模块边界(clang 直接拒绝 `export` internal-linkage 的 using-declaration,gcc 只是宽容),已由 `src/core_ops.inc`(saturate_cast、Point/Size/Rect/Range/Scalar、Mat/MatExpr)+ `src/matx_ops.inc`(Matx/Vec 代数)+ `src/core_fns.inc`(static-inline 命名函数)替换 —— 这正是 `import opencv.cv;` 能在 clang(macOS/Windows)与 gcc 上都编译的原因。
+包不固定工具链(mcpp 解析环境默认;已本地验证 gcc 16 / llvm 22 / gcc-musl `--target x86_64-linux-musl`)。上游 OpenCV 5.0.0 源码 **vendored 于 `third_party/opencv-5.0.0/`**(官方 tag tarball 裁剪导入,sha256 锁定,零补丁;`tools/vendor/import_opencv.sh` 可复现),per-OS 冻结配置快照在 `gen/`(由 `tools/vendor/port_descriptor.py` 一次性从退役的 compat.opencv 描述符移植);包索引侧只剩指向本仓库 Release 的薄 `opencv.lua`。运算符与命名自由函数的 `static inline` 表面无法跨模块边界(clang 直接拒绝 `export` internal-linkage 的 using-declaration,gcc 只是宽容),已由 `src/core_ops.inc`(saturate_cast、Point/Size/Rect/Range/Scalar、Mat/MatExpr)+ `src/matx_ops.inc`(Matx/Vec 代数)+ `src/core_fns.inc`(static-inline 命名函数)替换 —— 这正是 `import opencv.cv;` 能在 clang(macOS/Windows)与 gcc 上都编译的原因。
 
 > [!NOTE]
 > 早期版本,接口可能调整。问题与想法欢迎提 [issue](https://github.com/Sunrisepeak/opencv-m/issues)。
 
 ## License
 
-封装代码 MIT;OpenCV 本体经 `compat.opencv` 提供,**Apache-2.0**。
+封装代码 MIT;vendored 的 OpenCV 本体(`third_party/opencv-5.0.0/`)**Apache-2.0**(内含各 3rdparty 组件原始许可)。

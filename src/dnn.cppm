@@ -1,7 +1,7 @@
 // opencv.dnn — C++23 module over OpenCV 5's deep-learning module (API
 // unchanged). OPTIONAL: this file is compiled only when the package `dnn`
-// feature is enabled, which forwards `compat.opencv/dnn` so the underlying
-// library is built with its dnn module (+ vendored protobuf + mlas). It is
+// feature is enabled, which also builds the vendored dnn module sources
+// (+ vendored protobuf + mlas) into the library. It is
 // deliberately NOT part of the `opencv.cv` umbrella — consumers opt in with
 // `import opencv.dnn;` (Net, blobFromImage, readNet, NMSBoxes, …).
 module;

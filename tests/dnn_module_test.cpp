@@ -1,5 +1,5 @@
 // dnn feature test — the opencv.dnn MODULE interface (not textual headers).
-// Only built with `--features dnn` (which forwards compat.opencv/dnn and
+// Only built with `--features dnn` (which adds the vendored dnn sources and
 // compiles src/dnn.cppm); without the feature this TU has no tests, so the
 // default `mcpp test` stays a clean pass. Deliberately not named dnn.cpp
 // (would collide with the dep's modules/dnn/src/dnn.cpp — #240 family).

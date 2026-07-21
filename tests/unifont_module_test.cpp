@@ -1,8 +1,8 @@
 // unifont feature test — through the module layer (import opencv.cv). The
-// "uni" builtin FontFace only exists when compat.opencv was built with
-// HAVE_UNIFONT, so its usability IS the feature probe: CJK rendering must
-// produce real ink. Only built with `--features unifont` (pure forward — no
-// new module surface); without it this TU has no tests.
+// "uni" builtin FontFace only exists when the library is built with
+// HAVE_UNIFONT (build.mcpp embeds the vendored font), so its usability IS
+// the feature probe: CJK rendering must produce real ink. Only built with
+// `--features unifont` (no new module surface); without it this TU has no tests.
 #include <gtest/gtest.h>
 #if defined(MCPP_FEATURE_UNIFONT)
 import opencv.cv;

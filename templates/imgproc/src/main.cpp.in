@@ -1,4 +1,5 @@
-// {{project.name}} — OpenCV 5 via C++23 modules: same API, no headers.
+// {{project.name}} — OpenCV 5 via C++23 modules: same API, no OpenCV headers.
+#include <cstdio>   // stderr: a C macro, so not exported by `import std;`
 import std;
 import opencv.cv;
 

@@ -23,14 +23,14 @@ jobs:
   # ~2700 TUs. The ~/.mcpp/registry cache carries toolchains and the built
   # compat.ffmpeg across runs; timeout is sized for the COLD path.
   #
-  # experimental legs (continue-on-error):
-  #   linux-musl  — green locally; blocked in CI on mcpp-index#110
-  #                 (compat.ffmpeg -Wno-error=incompatible-pointer-types for
-  #                 musl's ioctl signature). Flip to required when it merges.
-  #   windows     — first CI outing of the gen/windows/tu/w*/ stub-namespace
+  # All five legs are required. Notes on the two that were experimental:
+  #   linux-musl  — needed mcpp-index#110 (compat.ffmpeg
+  #                 -Wno-error=incompatible-pointer-types for musl's ioctl
+  #                 signature); merged as e83ed49, green since.
+  #   windows     — builds through the gen/windows/tu/w*/ stub-namespace
   #                 workaround for mcpp-community/mcpp#258 (windows per-glob
-  #                 flags keyed on windows-only stub paths); flip to required
-  #                 once proven green here.
+  #                 flags keyed on windows-only stub paths). Delete the stub
+  #                 layer when per-OS flag tables land upstream.
   test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -40,7 +40,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: linux-gcc (required)
+          - name: linux-gcc
             os: ubuntu-latest
             suffix: linux-x86_64
             ext: tar.gz
@@ -59,8 +59,8 @@ jobs:
             # gcc first: `mcpp toolchain install llvm` does not pull the
             # xim glibc runtime its binaries are patchelf'd against (their
             # ELF interpreter lives under xim-x-glibc/2.39 → exec 127 on a
-            # bare runner); the gcc install brings it. mcpp packaging gap,
-            # to be reported.
+            # bare runner); the gcc install brings it.
+            # mcpp packaging gap: mcpp-community/mcpp#259.
             setup: |
               mcpp toolchain install gcc 16.1.0
               mcpp toolchain install llvm 22.1.8
@@ -68,7 +68,7 @@ jobs:
             experimental: false
             features: false
             examples: false
-          - name: linux-musl-static (pending mcpp-index#110)
+          - name: linux-musl-static
             os: ubuntu-latest
             suffix: linux-x86_64
             ext: tar.gz
@@ -76,7 +76,7 @@ jobs:
             setup: |
               mcpp toolchain install gcc 16 --target x86_64-linux-musl
               mcpp toolchain default gcc@16.1.0 --target x86_64-linux-musl
-            experimental: true
+            experimental: false
             features: false
             examples: false
           - name: macos-llvm
@@ -88,13 +88,13 @@ jobs:
             experimental: false
             features: false
             examples: false
-          - name: windows-llvm (experimental)
+          - name: windows-llvm
             os: windows-latest
             suffix: windows-x86_64
             ext: zip
             mcpp: bin/mcpp.exe
             setup: ""
-            experimental: true
+            experimental: false
             features: false
             examples: false
     steps:

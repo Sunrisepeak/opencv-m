@@ -1,0 +1,100 @@
+// build.mcpp — opencv-m single-repo build glue. Covers exactly what the
+// mcpp.toml manifest grammar cannot express (v0.0.101), nothing more:
+//
+//   1. per-OS generated-config include dirs: the frozen config snapshots live
+//      in gen/<os>/ (cvconfig.h, cv_cpu_config.h, per-ISA dispatch TU headers)
+//      + gen/common/ overlaps; the manifest has no [target.'cfg(os)']
+//      include_dirs key, so the per-OS -I list is read from
+//      gen/<os>/INCLUDE_DIRS.txt (written by tools/vendor/port_descriptor.py)
+//      and emitted as PRIVATE include dirs — consumers only ever need
+//      gen/common (opencv2/opencv_modules.hpp), which is declarative in
+//      [build].include_dirs.
+//   2. unifont: when the `unifont` feature is on, hex-embed the vendored
+//      assets/WenQuanYiMicroHei.ttf.gz into $MCPP_OUT_DIR/builtin_font_uni.h
+//      (symbol OcvBuiltinFontUni; byte-faithful port of cmake ocv_blob2hdr —
+//      the COMPRESSED bytes are embedded, OpenCV inflates at runtime).
+//
+// Raw `mcpp:` stdout protocol; diagnostics go to stdout as non-directive
+// lines (never stderr: it can interleave into the buffered directive stream).
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <string>
+
+namespace fs = std::filesystem;
+
+static std::string slurp(const fs::path& p) {
+    std::ifstream f(p, std::ios::binary);
+    if (!f) { std::printf("opencv-m build.mcpp: cannot read %s\n", p.string().c_str()); std::fflush(stdout); std::exit(1); }
+    std::ostringstream ss; ss << f.rdbuf(); return ss.str();
+}
+
+static void spew(const fs::path& p, const std::string& content) {
+    fs::create_directories(p.parent_path());
+    if (fs::exists(p)) {  // keep mtimes stable for unchanged outputs
+        std::ifstream f(p, std::ios::binary); std::ostringstream ss; ss << f.rdbuf();
+        if (ss.str() == content) return;
+    }
+    std::ofstream f(p, std::ios::binary);
+    f << content;
+    if (!f) { std::printf("opencv-m build.mcpp: cannot write %s\n", p.string().c_str()); std::fflush(stdout); std::exit(1); }
+}
+
+// byte-faithful port of cmake ocv_blob2hdr (same emission as the retired
+// compat.opencv descriptor): 16 bytes per line, ", " separators.
+static void blob2hdr(const fs::path& blob, const fs::path& hdr, const std::string& var) {
+    std::string data = slurp(blob);
+    std::ostringstream out;
+    out << "// Auto generated file.\nstatic const unsigned char " << var << "[] =\n{\n";
+    char buf[8];
+    for (size_t i = 0; i < data.size(); i++) {
+        std::snprintf(buf, sizeof buf, "0x%02x", (unsigned char)data[i]);
+        out << buf;
+        if (i + 1 != data.size()) out << ", ";
+        if (i % 16 == 15 && i + 1 != data.size()) out << "\n";
+    }
+    out << "\n};\n";
+    spew(hdr, out.str());
+}
+
+int main() {
+    const char* man_env = std::getenv("MCPP_MANIFEST_DIR");
+    fs::path man = man_env ? man_env : ".";
+
+    // 1. per-OS include dirs
+    const char* os_env = std::getenv("MCPP_TARGET_OS");
+    std::string os = os_env ? os_env : "linux";
+    if (os == "macos") os = "macosx";  // gen/ keeps the descriptor-era dir name
+    std::string listrel = "gen/" + os + "/INCLUDE_DIRS.txt";
+    std::ifstream list(man / listrel);
+    if (!list) {
+        std::printf("opencv-m build.mcpp: %s missing — no frozen snapshot for target OS '%s'\n",
+                    listrel.c_str(), os.c_str());
+        std::fflush(stdout);
+        return 1;
+    }
+    std::string line;
+    while (std::getline(list, line)) {
+        while (!line.empty() && (line.back() == '\r' || line.back() == ' ')) line.pop_back();
+        if (line.empty() || line[0] == '#') continue;
+        std::printf("mcpp:include-dir=%s\n", line.c_str());
+    }
+    std::printf("mcpp:rerun-if-changed=%s\n", listrel.c_str());
+
+    // 2. unifont embed (feature-gated)
+    if (std::getenv("MCPP_FEATURE_UNIFONT")) {
+        const char* out_env = std::getenv("MCPP_OUT_DIR");
+        if (!out_env) { std::printf("opencv-m build.mcpp: MCPP_OUT_DIR unset\n"); std::fflush(stdout); return 1; }
+        fs::path out = out_env;
+        blob2hdr(man / "assets/WenQuanYiMicroHei.ttf.gz", out / "builtin_font_uni.h", "OcvBuiltinFontUni");
+        std::printf("mcpp:include-dir=%s\n", out.string().c_str());
+        std::printf("mcpp:rerun-if-changed=assets/WenQuanYiMicroHei.ttf.gz\n");
+        std::printf("opencv-m build.mcpp: unifont embedded\n");
+    }
+
+    std::printf("opencv-m build.mcpp: include dirs for '%s' emitted\n", os.c_str());
+    std::fflush(stdout);
+    return 0;
+}

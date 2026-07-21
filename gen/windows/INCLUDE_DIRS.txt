@@ -1,0 +1,13 @@
+gen/windows
+gen/common
+gen/windows/3rdparty/libjpeg-turbo
+gen/common/3rdparty/libjpeg-turbo
+gen/common/3rdparty/zlib
+gen/windows/modules/core
+gen/common/modules/core
+gen/windows/modules/imgproc
+gen/common/modules/imgproc
+gen/windows/modules/dnn
+gen/common/modules/dnn
+gen/common/modules/highgui
+gen/common/synth

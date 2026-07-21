@@ -1,0 +1,14 @@
+gen/macosx
+gen/common
+gen/macosx/3rdparty/libjpeg-turbo
+gen/common/3rdparty/libjpeg-turbo
+gen/macosx/3rdparty/libjpeg-turbo/simd/arm
+gen/common/3rdparty/zlib
+gen/macosx/modules/core
+gen/common/modules/core
+gen/macosx/modules/imgproc
+gen/common/modules/imgproc
+gen/macosx/modules/dnn
+gen/common/modules/dnn
+gen/common/modules/highgui
+gen/common/synth

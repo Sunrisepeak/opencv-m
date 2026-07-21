@@ -27,21 +27,25 @@ TEST(ApiSurface, ImgprocEnumsAndOps) {
     cv::Mat src(8, 8, cv::CV_8UC3, cv::Scalar(10, 20, 30)), dst, gray;
     cv::resize(src, dst, {16, 16}, 0, 0, cv::INTER_CUBIC);
     cv::cvtColor(dst, gray, cv::COLOR_BGR2GRAY);
-    EXPECT_EQ(gray.size(), cv::Size(16, 16));
+    EXPECT_TRUE(gray.size() == cv::Size(16, 16));  // see printer note below
     EXPECT_EQ(gray.channels(), 1);
 }
 
 TEST(ApiSurface, ReplacementValueOps) {
     // upstream declares these operators `static inline` (TU-local) — the
     // module ships self-contained replacements (src/core_ops.inc)
+    // NOTE: cv-typed comparisons use EXPECT_TRUE(a == b), not EXPECT_EQ —
+    // gtest's value-printer probes operator<< via ADL over the imported
+    // module surface and that ADL walk segfaults linux clang 20/22 (frontend
+    // bug, minimal repro archived; gcc is fine either way).
     EXPECT_TRUE(cv::Size(2, 3) != cv::Size(3, 2));
     EXPECT_TRUE(cv::Size(2, 3) == cv::Size(2, 3));
-    EXPECT_EQ(cv::Point(1, 2) + cv::Point(3, 4), cv::Point(4, 6));
-    EXPECT_EQ(cv::Point2f(1.f, 2.f) * 2.f, cv::Point2f(2.f, 4.f));
-    EXPECT_EQ(cv::Rect(0, 0, 4, 4) & cv::Rect(2, 2, 4, 4), cv::Rect(2, 2, 2, 2));
-    EXPECT_EQ(cv::Rect(0, 0, 2, 2) | cv::Rect(2, 2, 2, 2), cv::Rect(0, 0, 4, 4));
+    EXPECT_TRUE(cv::Point(1, 2) + cv::Point(3, 4) == cv::Point(4, 6));
+    EXPECT_TRUE(cv::Point2f(1.f, 2.f) * 2.f == cv::Point2f(2.f, 4.f));
+    EXPECT_TRUE((cv::Rect(0, 0, 4, 4) & cv::Rect(2, 2, 4, 4)) == cv::Rect(2, 2, 2, 2));
+    EXPECT_TRUE((cv::Rect(0, 0, 2, 2) | cv::Rect(2, 2, 2, 2)) == cv::Rect(0, 0, 4, 4));
     EXPECT_TRUE(cv::Range(1, 5) == cv::Range(1, 5));
-    EXPECT_EQ((cv::Range(1, 5) & cv::Range(3, 9)), cv::Range(3, 5));
+    EXPECT_TRUE((cv::Range(1, 5) & cv::Range(3, 9)) == cv::Range(3, 5));
     EXPECT_EQ(cv::saturate_cast<unsigned char>(300), 255);
     EXPECT_EQ(cv::saturate_cast<unsigned char>(-5), 0);
     EXPECT_EQ(cv::saturate_cast<short>(1e9f), 32767);

@@ -56,7 +56,13 @@ jobs:
             suffix: linux-x86_64
             ext: tar.gz
             mcpp: bin/mcpp
+            # gcc first: `mcpp toolchain install llvm` does not pull the
+            # xim glibc runtime its binaries are patchelf'd against (their
+            # ELF interpreter lives under xim-x-glibc/2.39 → exec 127 on a
+            # bare runner); the gcc install brings it. mcpp packaging gap,
+            # to be reported.
             setup: |
+              mcpp toolchain install gcc 16.1.0
               mcpp toolchain install llvm 22.1.8
               mcpp toolchain default llvm@22.1.8
             experimental: false

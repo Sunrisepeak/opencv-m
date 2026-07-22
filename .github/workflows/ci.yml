@@ -170,6 +170,30 @@ jobs:
         shell: bash
         run: mcpp build
 
+      # Guard the module-interface BMIs against non-baseline target features.
+      # A src/*.cppm compiled with -msse3/-mavx/-march=… bakes that feature
+      # into opencv.<mod>.pcm; a consumer TU compiled at plain baseline then
+      # cannot load it (clang -Wmodule-file-config-mismatch → "use of
+      # undeclared identifier 'cv'"). The library .cpp legitimately need SSE3
+      # (OpenCV's x86_64 baseline), so it is applied per-glob to the library
+      # TUs only — this asserts it never leaked back onto an interface unit.
+      - name: Module-interface baseline guard
+        if: matrix.features
+        shell: bash
+        run: |
+          ninja=$(find target -name build.ninja | head -1)
+          [ -n "$ninja" ] || { echo "no build.ninja found"; exit 1; }
+          bad=0
+          for m in opencv cv core imgproc imgcodecs videoio highgui flann geometry; do
+            hits=$(grep -E "[ =/]src/${m}\.cppm" "$ninja" | grep -oE '\-m(sse[0-9._]*|avx[0-9_]*|arch=[^ ]+)' | sort -u || true)
+            if [ -n "$hits" ]; then
+              echo "::error::src/${m}.cppm carries non-baseline target feature(s): $hits — its BMI will be unloadable by baseline consumers"
+              bad=1
+            fi
+          done
+          [ $bad -eq 0 ] && echo "module interfaces are baseline (no target-feature flags)."
+          exit $bad
+
       - name: Test
         shell: bash
         run: mcpp test

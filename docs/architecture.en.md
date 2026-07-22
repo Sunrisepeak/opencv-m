@@ -231,6 +231,6 @@ coverage is already contained in `mcpp test`.
 
 | Item | Removal condition |
 |---|---|
-| the 703 stubs under `gen/windows/tu/w*/` and the corresponding `cfg(windows)` glob entries | no longer grammar-blocked since mcpp#258; removing the stub layer (compiling `third_party/**` directly on Windows, undoing the unix defines per cfg) is a separate, later clean-up |
+| the 703 stubs under `gen/windows/tu/w*/` and the corresponding `cfg(windows)` glob entries | no longer grammar-blocked since mcpp#258; removing the stub layer (compiling `third_party/**` directly on Windows, undoing the unix defines per cfg) is a separate, later clean-up — see [#17](https://github.com/Sunrisepeak/opencv-m/issues/17) |
 | the llvm CI leg installing gcc first | mcpp#259 (`toolchain install llvm` does not pull its glibc runtime) is fixed |
 | the whole-type deduction form in `src/matx_ops.inc` | may be reconsidered once the clang BMI regression is fixed, though the present form is harmless in itself |

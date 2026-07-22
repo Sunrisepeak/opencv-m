@@ -197,6 +197,6 @@ CI 为平台 × 工具链矩阵,五条腿全部为必需:
 
 | 项 | 移除条件 |
 |---|---|
-| `gen/windows/tu/w*/` 的 703 个桩文件与 `cfg(windows)` 的对应 glob 条目 | 语法阻塞已随 mcpp#258 解除;移除桩层是独立的后续清理(Windows 直接编译 `third_party/**` 并按 cfg 撤销 unix 定义) |
+| `gen/windows/tu/w*/` 的 703 个桩文件与 `cfg(windows)` 的对应 glob 条目 | 语法阻塞已随 mcpp#258 解除;移除桩层是独立的后续清理(Windows 直接编译 `third_party/**` 并按 cfg 撤销 unix 定义),见 [#17](https://github.com/Sunrisepeak/opencv-m/issues/17) |
 | llvm CI 腿先安装 gcc 的变通 | mcpp#259(`toolchain install llvm` 未拉取其 glibc 运行时)修复 |
 | `src/matx_ops.inc` 的整类型推导写法 | clang BMI 回归修复后可考虑回退,但当前形式本身无害 |

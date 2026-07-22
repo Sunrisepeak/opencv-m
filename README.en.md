@@ -43,7 +43,7 @@ Or declare the dependency in an existing project:
 
 ```toml
 [dependencies]
-opencv = "0.0.7"
+opencv = "0.0.10"
 ```
 
 ```cpp
@@ -87,12 +87,13 @@ spelling of a function-like macro (`CV_Assert`, the version macros) should inclu
 
 ```toml
 [dependencies]
-opencv = { version = "0.0.7", features = ["dnn"] }
+opencv = { version = "0.0.10", features = ["dnn"] }
 ```
 
 The dnn layer adds over 300 translation units, is built only for consumers that enable it
-explicitly, and does not enter the `opencv.cv` aggregate by default. The per-OS feature
-semantics require mcpp ≥ 0.0.101.
+explicitly, and does not enter the `opencv.cv` aggregate by default. mcpp ≥ 0.0.102 is
+required: the per-OS feature semantics (mcpp#253) and the OS-conditional per-glob
+compile options (`[target.'cfg(...)'.build.flags]`, mcpp#258).
 
 ## Examples
 

@@ -72,10 +72,11 @@ is that an upstream bump requires the port to be re-run.
 
 ### 2.3 Build description — `mcpp.toml` and `build.mcpp`
 
-`mcpp.toml` (1449 lines) carries everything that can be declared: source globs, public include
-directories, 51 `[[build.flags]]` per-glob compile-option groups, platform-conditional source
-sets under `[target.'cfg(os)'.build]`, the `[features]` definitions, and the single external
-dependency `compat.ffmpeg`.
+`mcpp.toml` (about 1500 lines) carries everything that can be declared: source globs, public
+include directories, 51 per-glob compile-option groups assigned to their OS under
+`[target.'cfg(...)'.build.flags]`, platform-conditional source sets under
+`[target.'cfg(os)'.build]`, the `[features]` definitions, and the single external dependency
+`compat.ffmpeg`.
 
 `build.mcpp` covers only the three things the manifest grammar **cannot** express, and nothing
 further:
@@ -154,24 +155,25 @@ Function-like macros (`CV_Assert`, `CV_Error`, the version macros) cannot be han
 a translation unit that needs the original spelling should `#include <opencv-m/macros.hpp>`
 before the import.
 
-### 3.4 Platform-conditional compilation and the temporary Windows layer
+### 3.4 Platform-conditional compilation and the Windows stub layer
 
-In the mcpp 0.0.101 manifest grammar, `sources` can be made platform-conditional but `flags`
-cannot — `[[build.flags]]` is a global table. The Linux/macOS difference is purely additive and
-the define names do not overlap between them, so it is resolved by hoisting the platform-specific
-defines into per-OS global `cflags`, each name having first been grep-verified as read only
-within its own code group.
+Since mcpp 0.0.102 the per-glob flag tables can be made platform-conditional
+(`[target.'cfg(...)'.build.flags]`, mcpp#258), and the descriptor is partitioned accordingly:
+the entries byte-identical between the Linux and macOS snapshots live in `cfg(unix)`, the
+x86_64 dispatch TUs and nasm `.asm` in `cfg(linux)`, the neon TUs in `cfg(macos)`, and the
+Windows tables in `cfg(windows)`. An entry whose predicate does not match the resolved target
+never enters the glob table, so no platform's build sees another platform's globs — and the
+structural dead-glob warnings (about 26 per build before the migration) are gone on every
+platform.
 
-The Windows difference comprises both **additions and removals** — the zlib group, for instance,
-defines `HAVE_UNISTD_H=1` on unix and must leave it undefined on Windows — and a removal cannot
-be expressed through an unconditional global table. A **stub-namespace** arrangement is used as
-an interim measure: every Windows translation unit is represented by a one-line `#include` stub
-under `gen/windows/tu/w*/` (703 stubs in total), which allows the Windows flag tables to key on
-Windows-only path globs.
-
-The layer is temporary. Once mcpp supports `[target.'cfg(os)'.build].flags` (mcpp#258), the 703
-stubs and the 32 corresponding glob entries in mcpp.toml are deleted together, and the 23
-dead-glob warnings emitted at build time disappear with them.
+The Windows/unix difference comprises both **additions and removals** — the zlib group, for
+instance, defines `HAVE_UNISTD_H=1` on unix and must leave it undefined on Windows. Conditional
+entries are appended after the base and take effect under GNU last-wins, so removals are now
+expressible; the Windows TUs are still carried by the **stub-namespace** arrangement — every
+Windows translation unit is a one-line `#include` stub under `gen/windows/tu/w*/` (703 stubs in
+total), giving each TU a stable path identity of its own. Removing the stub layer altogether
+(compiling `third_party/**` directly on Windows and undoing the unix defines per cfg) is no
+longer blocked by the manifest grammar and remains a separate, later clean-up.
 
 ### 3.5 Feature partitioning
 
@@ -229,7 +231,6 @@ coverage is already contained in `mcpp test`.
 
 | Item | Removal condition |
 |---|---|
-| the 703 stubs under `gen/windows/tu/w*/` and the 32 glob entries | mcpp#258 (`[target.'cfg(os)'.build].flags`) lands |
-| the 23 dead-glob warnings at build time | as above |
+| the 703 stubs under `gen/windows/tu/w*/` and the corresponding `cfg(windows)` glob entries | no longer grammar-blocked since mcpp#258; removing the stub layer (compiling `third_party/**` directly on Windows, undoing the unix defines per cfg) is a separate, later clean-up |
 | the llvm CI leg installing gcc first | mcpp#259 (`toolchain install llvm` does not pull its glibc runtime) is fixed |
 | the whole-type deduction form in `src/matx_ops.inc` | may be reconsidered once the clang BMI regression is fixed, though the present form is harmless in itself |

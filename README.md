@@ -38,7 +38,7 @@ mcpp new myvision --template opencv && cd myvision && mcpp run -- input.png    #
 
 ```toml
 [dependencies]
-opencv = "0.0.7"
+opencv = "0.0.10"
 ```
 
 ```cpp
@@ -80,11 +80,12 @@ int main() {
 
 ```toml
 [dependencies]
-opencv = { version = "0.0.7", features = ["dnn"] }
+opencv = { version = "0.0.10", features = ["dnn"] }
 ```
 
 dnn 底层多出 300 余个翻译单元,仅对显式启用者构建,且默认不进入 `opencv.cv` 聚合模块。
-per-OS 特性语义要求 mcpp ≥ 0.0.101。
+要求 mcpp ≥ 0.0.102:per-OS 特性语义(mcpp#253)与按 OS 条件化的逐 glob 编译选项
+(`[target.'cfg(...)'.build.flags]`,mcpp#258)。
 
 ## 示例
 

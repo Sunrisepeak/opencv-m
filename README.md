@@ -1,40 +1,45 @@
 # opencv
 
-> OpenCV 5 的 C++23 模块化封装。以 `import opencv.cv;` 取代头文件包含,API 拼写保持不变;
-> 三平台全功能构建,dnn 与 unifont 以特性形式按需启用。
+> A C++23 module wrapper over OpenCV 5. `import opencv.cv;` replaces header inclusion while the
+> API spelling remains unchanged; the build is fully featured on three platforms, with dnn and
+> unifont available as opt-in features.
 
-**中文** · [English](README.en.md)
+**English** · [中文](README.zh.md)
 
 [![Release](https://img.shields.io/github/v/release/Sunrisepeak/opencv-m)](https://github.com/Sunrisepeak/opencv-m/releases)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
 [![Module](https://img.shields.io/badge/module-ok-green.svg)](https://en.cppreference.com/w/cpp/language/modules)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-| [mcpp 构建工具](https://github.com/mcpp-community/mcpp) · [包索引 mcpp-index](https://github.com/mcpp-community/mcpp-index) · [OpenCV 上游](https://github.com/opencv/opencv) · [架构设计](docs/architecture.md) · [Issues](https://github.com/Sunrisepeak/opencv-m/issues) · [Releases](https://github.com/Sunrisepeak/opencv-m/releases) |
+| [mcpp build tool](https://github.com/mcpp-community/mcpp) · [package index](https://github.com/mcpp-community/mcpp-index) · [OpenCV upstream](https://github.com/opencv/opencv) · [Architecture](docs/architecture.en.md) · [Issues](https://github.com/Sunrisepeak/opencv-m/issues) · [Releases](https://github.com/Sunrisepeak/opencv-m/releases) |
 |:---:|
 | [![CI](https://github.com/Sunrisepeak/opencv-m/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sunrisepeak/opencv-m/actions/workflows/ci.yml) |
 
-## 特性
+## Characteristics
 
-- **模块化导入**。消费者代码通过 `import opencv.cv;` 获得 OpenCV 接口,不需要头文件包含,
-  而所用 API 与调用习惯与上游一致。
-- **源码构建,消费端不执行 CMake**。OpenCV 5.0.0 源码内置于 `third_party/`,构建期配置以
-  已生成的真实文件形式提交在 `gen/`,mcpp 依据本仓库 `mcpp.toml` 直接编译整套 OpenCV
-  (含 NASM SIMD,运行时 dispatch 保留);videoio 的 FFmpeg 后端由 `compat.ffmpeg` 提供。
-  模块层与完整构建由单一仓库承载。
-- **三平台等价功能**。Linux、macOS、Windows 三平台均通过 CI 验证,各自具备 imgcodecs
-  (PNG 与 JPEG)、videoio(FFmpeg `cap_ffmpeg`)与可选的 dnn;dnn 按平台选择 gemm 后端
-  (x86 mlas/AVX、arm mlas/NEON、Windows 内置 fast_gemm)。
-- **特性可选**。`dnn` 启用 `import opencv.dnn;` 深度学习模块,`unifont` 启用 Unicode 与
-  中日韩字符的 `putText` 渲染。
+- **Module-based import.** Consumer code obtains the OpenCV interface through
+  `import opencv.cv;` without header inclusion, while the API and its usage remain those of
+  upstream OpenCV.
+- **Built from source, with no CMake on the consumer side.** The OpenCV 5.0.0 sources are
+  vendored under `third_party/`, the configure-time artefacts are committed as real generated
+  files under `gen/`, and mcpp compiles the whole of OpenCV — NASM SIMD included, with runtime
+  dispatch preserved — from this repository's `mcpp.toml`. The FFmpeg backend of videoio is
+  supplied by `compat.ffmpeg`. A single repository carries both the module layer and the
+  complete build.
+- **Equivalent functionality on three platforms.** Linux, macOS and Windows are each verified in
+  CI and each provide imgcodecs (PNG and JPEG), videoio (FFmpeg `cap_ffmpeg`) and optional dnn.
+  The gemm backend of dnn is selected per platform (x86 mlas/AVX, arm mlas/NEON, built-in
+  fast_gemm on Windows).
+- **Opt-in features.** `dnn` enables the `import opencv.dnn;` deep-learning module; `unifont`
+  enables `putText` rendering for Unicode and CJK text.
 
-## 快速开始
+## Getting started
 
 ```bash
-mcpp new myvision --template opencv && cd myvision && mcpp run -- input.png    # 灰度管线骨架
+mcpp new myvision --template opencv && cd myvision && mcpp run -- input.png    # grayscale pipeline skeleton
 ```
 
-或在既有项目中声明依赖:
+Or declare the dependency in an existing project:
 
 ```toml
 [dependencies]
@@ -42,7 +47,7 @@ opencv = "0.0.10"
 ```
 
 ```cpp
-import opencv.cv;   // 或按模块:import opencv.core; import opencv.imgproc; …
+import opencv.cv;   // or per module: import opencv.core; import opencv.imgproc; …
 
 int main() {
     cv::Mat img = cv::imread("in.png", cv::IMREAD_COLOR);
@@ -53,75 +58,83 @@ int main() {
 }
 ```
 
-## 模块
+## Modules
 
-| 模块 | 说明 |
+| Module | Description |
 |---|---|
-| `opencv.cv` | 聚合入口,推荐默认使用 |
-| `opencv.core` | 核心:`Mat`、类型、算术与运算符替换面 |
-| `opencv.imgproc` | 图像处理:滤波、几何变换、颜色空间、绘制 |
-| `opencv.imgcodecs` | 图像读写(PNG 与 JPEG) |
-| `opencv.videoio` | 视频 I/O(V4L2 与 FFmpeg 后端,三平台) |
-| `opencv.highgui` | 高层 GUI(headless) |
-| `opencv.flann` / `opencv.geometry` | 依赖闭包模块 |
-| `opencv.dnn` | 深度学习(需启用 `dnn` 特性) |
+| `opencv.cv` | aggregate entry point, recommended by default |
+| `opencv.core` | core: `Mat`, types, arithmetic and the operator replacement surface |
+| `opencv.imgproc` | image processing: filtering, geometric transforms, colour spaces, drawing |
+| `opencv.imgcodecs` | image reading and writing (PNG and JPEG) |
+| `opencv.videoio` | video I/O (V4L2 and FFmpeg backends, all three platforms) |
+| `opencv.highgui` | high-level GUI (headless) |
+| `opencv.flann` / `opencv.geometry` | dependency-closure modules |
+| `opencv.dnn` | deep learning (requires the `dnn` feature) |
 
-每个 `opencv.<mod>` 是自包含的全局模块片段,仅导出自身表面,模块之间不互相导入;
-`opencv.cv` 通过 `export import` 聚合。对象式常量宏(`CV_8UC3`、`CV_PI`、`CV_MAKETYPE` 等)
-以保持原拼写的 `cv::` constexpr 形式导出;需要函数式宏(`CV_Assert`、版本宏)原始拼写的
-翻译单元,应在 import 之前包含 `<opencv-m/macros.hpp>`。
+Each `opencv.<mod>` is a self-contained global module fragment that exports only its own surface;
+the modules do not import one another, and `opencv.cv` aggregates them through `export import`.
+Object-like constant macros (`CV_8UC3`, `CV_PI`, `CV_MAKETYPE`, …) are exported as `cv::`
+constexpr entities retaining the original spelling. A translation unit that needs the original
+spelling of a function-like macro (`CV_Assert`, the version macros) should include
+`<opencv-m/macros.hpp>` before the import.
 
-## 特性开关
+## Features
 
-| 特性 | 说明 |
+| Feature | Description |
 |---|---|
-| `dnn` | 追加 `import opencv.dnn;` 接口(`Net`、`blobFromImage`、`readNet` 等)并构建底层 dnn 与内置 protobuf。三平台可用(per-OS 特性,mcpp#253):Linux 与 macOS 使用 mlas(x86 AVX/AVX2/AVX512,arm NEON);Windows 使用 OpenCV 内置 `fast_gemm` —— 上游 mlas 的 x86 汇编为 GAS/ELF 语法,clang-cl 无法产出 COFF,故沿用上游"无汇编即回退 fast_gemm"的路径 |
-| `unifont` | 内嵌 WenQuanYi Micro Hei 字体,经 `FontFace("uni")` 支持 Unicode 与中日韩字符的 `putText` |
+| `dnn` | adds the `import opencv.dnn;` interface (`Net`, `blobFromImage`, `readNet`, …) and builds the underlying dnn together with the vendored protobuf. Available on all three platforms (per-OS features, mcpp#253): Linux and macOS use mlas (x86 AVX/AVX2/AVX512, arm NEON), while Windows uses OpenCV's built-in `fast_gemm` — upstream mlas x86 assembly is GAS/ELF syntax from which clang-cl cannot emit COFF, so the upstream path of falling back to fast_gemm in the absence of assembly is followed |
+| `unifont` | embeds the WenQuanYi Micro Hei font, enabling `putText` for Unicode and CJK text through `FontFace("uni")` |
 
 ```toml
 [dependencies]
 opencv = { version = "0.0.10", features = ["dnn"] }
 ```
 
-dnn 底层多出 300 余个翻译单元,仅对显式启用者构建,且默认不进入 `opencv.cv` 聚合模块。
-要求 mcpp ≥ 0.0.102:per-OS 特性语义(mcpp#253)与按 OS 条件化的逐 glob 编译选项
-(`[target.'cfg(...)'.build.flags]`,mcpp#258)。
+The dnn layer adds over 300 translation units, is built only for consumers that enable it
+explicitly, and does not enter the `opencv.cv` aggregate by default. mcpp ≥ 0.0.102 is
+required: the per-OS feature semantics (mcpp#253) and the OS-conditional per-glob
+compile options (`[target.'cfg(...)'.build.flags]`, mcpp#258).
 
-## 示例
+## Examples
 
-| 示例 | 内容 |
+| Example | Contents |
 |---|---|
-| [`examples/probe`](examples/probe) | 版本与构建信息(无需输入) |
-| [`examples/gray_pipeline`](examples/gray_pipeline) | 读图、灰度化、写图的最小管线 |
-| [`examples/workspace`](examples/workspace) | 多成员 workspace 示例 |
+| [`examples/probe`](examples/probe) | version and build information (no input required) |
+| [`examples/gray_pipeline`](examples/gray_pipeline) | a minimal read, grayscale and write pipeline |
+| [`examples/workspace`](examples/workspace) | a multi-member workspace |
 
 ```bash
 cd examples/gray_pipeline && mcpp run -- input.png
 ```
 
-## 构建与工具链
+## Build and toolchains
 
-本包不固定工具链,由 mcpp 解析环境默认值。CI 覆盖五种组合:Linux/gcc 16、Linux/llvm 22、
-Linux/gcc `--target x86_64-linux-musl`(静态链接)、macOS/llvm(arm64)、Windows/llvm。
+The package does not pin a toolchain; mcpp resolves the environment default. CI covers five
+combinations: Linux/gcc 16, Linux/llvm 22, Linux/gcc `--target x86_64-linux-musl` (statically
+linked), macOS/llvm (arm64) and Windows/llvm.
 
-上游 OpenCV 5.0.0 源码内置于 `third_party/opencv-5.0.0/`,来自官方 tag tarball 的裁剪导入,
-sha256 锁定且不含补丁,`tools/vendor/import_opencv.sh` 可复现该过程。平台相关的构建期配置
-快照位于 `gen/`,由 `tools/vendor/port_descriptor.py` 一次性移植自已退役的 compat.opencv
-描述符。包索引侧仅保留指向本仓库 Release 的薄 `opencv.lua`。
+The upstream OpenCV 5.0.0 sources are vendored under `third_party/opencv-5.0.0/` as a pruned
+import of the official tag tarball, pinned by sha256 and free of patches; the process is
+reproducible through `tools/vendor/import_opencv.sh`. The platform-dependent configure-time
+snapshots live in `gen/` and were ported once from the retired compat.opencv descriptor by
+`tools/vendor/port_descriptor.py`. On the package-index side only a thin `opencv.lua` pointing at
+this repository's releases remains.
 
-运算符与部分命名自由函数在上游以 `static inline` 定义,属内部链接,无法经 `export using`
-重新导出(clang 直接拒绝,gcc 宽容)。本仓库以外部链接的等价定义替换该表面,分布于
-`src/core_ops.inc`(saturate_cast,Point/Size/Rect/Range/Scalar,Mat/MatExpr)、
-`src/matx_ops.inc`(Matx/Vec 代数)与 `src/core_fns.inc`(命名自由函数)。这是
-`import opencv.cv;` 能在 clang 与 gcc 上同时编译的原因。
+Operators and a number of named free functions are defined `static inline` upstream. Such
+entities have internal linkage and cannot be re-exported through `export using` — clang rejects
+this outright, gcc merely tolerates it. This repository replaces that surface with equivalent
+external-linkage definitions across `src/core_ops.inc` (saturate_cast, Point/Size/Rect/Range/
+Scalar, Mat/MatExpr), `src/matx_ops.inc` (Matx/Vec algebra) and `src/core_fns.inc` (named free
+functions). This is the reason `import opencv.cv;` compiles under both clang and gcc.
 
-整体结构、各层职责与设计依据详见[架构设计说明](docs/architecture.md)。
+The overall structure, the responsibility of each layer and the reasoning behind the design are
+documented in the [architecture description](docs/architecture.en.md).
 
 > [!NOTE]
-> 本项目处于早期阶段,接口可能调整。问题与建议欢迎提交
-> [issue](https://github.com/Sunrisepeak/opencv-m/issues)。
+> The project is at an early stage and its interface may change. Questions and suggestions are
+> welcome as [issues](https://github.com/Sunrisepeak/opencv-m/issues).
 
-## 许可
+## License
 
-封装代码采用 MIT 许可。内置的 OpenCV 本体(`third_party/opencv-5.0.0/`)采用 Apache-2.0 许可,
-其中各第三方组件保留各自原始许可。
+The wrapper code is MIT-licensed. The vendored OpenCV itself (`third_party/opencv-5.0.0/`) is
+Apache-2.0, with each third-party component retaining its own original license.

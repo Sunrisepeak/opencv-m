@@ -8,12 +8,12 @@ permissions:
   contents: write
 
 env:
-  # Keep in lockstep with ci.yml: the manifest needs 0.0.102
+  # Keep in lockstep with ci.yml: the manifest needs >= 0.0.102
   # ([target.'cfg(...)'.build.flags], mcpp#258). The previous `xlings install`
   # path delivered whatever mcpp xlings shipped (0.0.101 at the time), which
   # rejects cfg-section flag tables — the v0.0.9 and v0.0.10 release runs both
   # failed on exactly that skew, while the 5-leg CI (pinned) was green.
-  MCPP_VERSION: "0.0.102"
+  MCPP_VERSION: "0.0.103"
 
 jobs:
   verify-and-release:

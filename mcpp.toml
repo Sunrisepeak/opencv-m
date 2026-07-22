@@ -1,6 +1,6 @@
 [package]
 name        = "opencv"
-version     = "0.0.7"
+version     = "0.0.10"
 description = "OpenCV 5.0.0 vendored + C++23 module layer — import opencv.cv; (API and habits unchanged, just no headers). Single repo: full source build carried by this manifest, frozen per-OS config snapshots in gen/, no compat.opencv dependency."
 license     = "MIT"
 
@@ -11,16 +11,18 @@ license     = "MIT"
 #   gen/common, gen/<os>/      frozen config snapshots as real files
 #   build.mcpp                 per-OS include dirs + per-OS dnn sources
 #                              (gen/<os>/DNN_SOURCES.txt) + unifont embed
-# Per-glob defines below scope __OPENCV_BUILD-family flags to third_party/**
+# The per-glob flag tables scope __OPENCV_BUILD-family flags to third_party/**
 # and gen/** TUs — src/*.cppm module-layer TUs never see them.
 #
-# The [[build.flags]] table = UNION of the linux+macosx snapshots (identical
-# or disjoint globs; arch-specific per-glob defines hoisted to per-OS cflags,
-# each name grep-verified to be read only by its own group) + the WINDOWS
-# tables keyed on gen/windows/tu/w*/ stub paths: every windows TU is a
-# one-line include stub, so its per-glob flags live on windows-only paths —
-# the in-grammar workaround for the missing [target.'cfg(os)'] per-glob
-# flags (mcpp-community/mcpp#258; drop the stub layer when it lands).
+# Since mcpp 0.0.102 the per-glob tables are OS-conditional
+# ([target.'cfg(...)'.build.flags], mcpp-community/mcpp#258): entries shared
+# by the linux+macosx snapshots live in cfg(unix), x86_64 dispatch + .asm in
+# cfg(linux), the neon TUs in cfg(macos), and the windows stub-path tables in
+# cfg(windows). An entry whose predicate does not match the resolved target
+# never enters the glob table, so no OS sees another OS's globs and no build
+# emits structural dead-glob warnings. The windows TUs remain one-line
+# include stubs under gen/windows/tu/w*/ (stable per-TU path identity);
+# dropping the stub layer entirely is a separate, larger change.
 # ─────────────────────────────────────────────────────────────────────────────
 
 [build]
@@ -71,7 +73,17 @@ include_dirs = [
         "third_party/opencv-5.0.0/modules/highgui/include",
     ]
 
-[[build.flags]]
+# ─────────────────────────────────────────────────────────────────────────────
+# Per-glob flag tables, one cfg section per OS (mcpp#258, needs mcpp >= 0.0.102).
+# An entry whose predicate does not match the resolved target never enters the
+# glob table, so no OS sees another OS's globs — zero structural dead-glob
+# warnings on any platform.
+#
+# cfg(unix) = the entries identical in the linux+macosx snapshots (grep-verified
+# per-name; HAVE_GETAUXVAL is read only under __ppc64__, dead on both targets).
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/modules/core/**"
 defines = [
     "HAVE_STDARG_H=1",
@@ -84,7 +96,7 @@ defines = [
     "__STDC_LIMIT_MACROS",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/modules/flann/**"
 defines = [
     "NDEBUG",
@@ -95,7 +107,7 @@ defines = [
     "__STDC_LIMIT_MACROS",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/modules/geometry/**"
 defines = [
     "NDEBUG",
@@ -106,7 +118,7 @@ defines = [
     "__STDC_LIMIT_MACROS",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/modules/highgui/**"
 defines = [
     "ENABLE_PLUGINS",
@@ -118,7 +130,7 @@ defines = [
     "__STDC_LIMIT_MACROS",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/modules/imgcodecs/**"
 defines = [
     "HAVE_IMGCODEC_HDR",
@@ -135,7 +147,7 @@ defines = [
     "__STDC_LIMIT_MACROS",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/modules/imgproc/**"
 defines = [
     "HAVE_STDARG_H=1",
@@ -148,7 +160,7 @@ defines = [
     "__STDC_LIMIT_MACROS",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/3rdparty/libjpeg-turbo/**"
 defines = [
     "NDEBUG",
@@ -156,7 +168,7 @@ defines = [
     "NO_PUTENV",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/tu/jpeg12/**"
 defines = [
     "BITS_IN_JSAMPLE=12",
@@ -165,7 +177,7 @@ defines = [
     "NO_PUTENV",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/tu/jpeg16/**"
 defines = [
     "BITS_IN_JSAMPLE=16",
@@ -174,7 +186,7 @@ defines = [
     "NO_PUTENV",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/3rdparty/libpng/**"
 defines = [
     "HAVE_STDARG_H=1",
@@ -182,7 +194,7 @@ defines = [
     "NDEBUG",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/modules/videoio/**"
 defines = [
     "ENABLE_PLUGINS",
@@ -196,7 +208,7 @@ defines = [
     "__STDC_LIMIT_MACROS",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "**/3rdparty/zlib/**"
 defines = [
     "HAVE_STDARG_H=1",
@@ -204,667 +216,22 @@ defines = [
     "NDEBUG",
 ]
 
-[[build.flags]]
-glob = "third_party/opencv-5.0.0/**/*.asm"
-defines = [
-    "ELF",
-    "NO_GETENV",
-    "NO_PUTENV",
-    "PIC",
-    "__CET__",
-    "__x86_64__",
-]
-
-[[build.flags]]
-glob = "**/modules/core/**/*.avx.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX",
-]
-
-[[build.flags]]
-glob = "**/modules/core/**/*.avx2.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-    "-mf16c",
-    "-mavx2",
-    "-mfma",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX2=1",
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_FMA3=1",
-    "CV_CPU_COMPILE_FP16=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX2",
-]
-
-[[build.flags]]
-glob = "**/modules/core/**/*.avx512_skx.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-    "-mf16c",
-    "-mavx2",
-    "-mfma",
-    "-mavx512f",
-    "-mavx512f",
-    "-mavx512cd",
-    "-mavx512f",
-    "-mavx512cd",
-    "-mavx512vl",
-    "-mavx512bw",
-    "-mavx512dq",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX2=1",
-    "CV_CPU_COMPILE_AVX512_COMMON=1",
-    "CV_CPU_COMPILE_AVX512_SKX=1",
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_AVX_512F=1",
-    "CV_CPU_COMPILE_FMA3=1",
-    "CV_CPU_COMPILE_FP16=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
-]
-
-[[build.flags]]
-glob = "**/modules/core/**/*.sse4_1.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-]
-defines = [
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=SSE4_1",
-]
-
-[[build.flags]]
-glob = "**/modules/core/**/*.sse4_2.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-]
-defines = [
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=SSE4_2",
-]
-
-[[build.flags]]
-glob = "**/modules/imgproc/**/*.avx.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX",
-]
-
-[[build.flags]]
-glob = "**/modules/imgproc/**/*.avx2.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-    "-mf16c",
-    "-mavx2",
-    "-mfma",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX2=1",
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_FMA3=1",
-    "CV_CPU_COMPILE_FP16=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX2",
-]
-
-[[build.flags]]
-glob = "**/modules/imgproc/**/*.avx512_skx.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-    "-mf16c",
-    "-mavx2",
-    "-mfma",
-    "-mavx512f",
-    "-mavx512f",
-    "-mavx512cd",
-    "-mavx512f",
-    "-mavx512cd",
-    "-mavx512vl",
-    "-mavx512bw",
-    "-mavx512dq",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX2=1",
-    "CV_CPU_COMPILE_AVX512_COMMON=1",
-    "CV_CPU_COMPILE_AVX512_SKX=1",
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_AVX_512F=1",
-    "CV_CPU_COMPILE_FMA3=1",
-    "CV_CPU_COMPILE_FP16=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
-]
-
-[[build.flags]]
-glob = "**/modules/imgproc/**/*.sse4_1.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-]
-defines = [
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=SSE4_1",
-]
-
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "third_party/opencv-5.0.0/modules/core/src/alloc.cpp"
 defines = [
     "HAVE_POSIX_MEMALIGN=1",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "third_party/opencv-5.0.0/modules/core/src/parallel/parallel.cpp"
 defines = [
     "PARALLEL_ENABLE_PLUGINS=1",
 ]
 
-[[build.flags]]
+[[target.'cfg(unix)'.build.flags]]
 glob = "third_party/opencv-5.0.0/modules/core/src/system.cpp"
 defines = [
     "HAVE_GETAUXVAL=1",
-]
-
-[[build.flags]]
-glob = "gen/common/modules/core/transpose.neon.cpp"
-defines = [
-    "CV_CPU_DISPATCH_MODE=NEON",
-]
-
-[[build.flags]]
-glob = "gen/common/modules/imgproc/warp_kernels.neon.cpp"
-defines = [
-    "CV_CPU_DISPATCH_MODE=NEON",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/core/**"
-defines = [
-    "HAVE_STDARG_H=1",
-    "NDEBUG",
-    "OPENCV_ALLOCATOR_STATS_COUNTER_TYPE=long long",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_USE_MATH_DEFINES",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-    "__OPENCV_BUILD=1",
-    "__STDC_CONSTANT_MACROS",
-    "__STDC_FORMAT_MACROS",
-    "__STDC_LIMIT_MACROS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/flann/**"
-defines = [
-    "NDEBUG",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_USE_MATH_DEFINES",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-    "__OPENCV_BUILD=1",
-    "__STDC_CONSTANT_MACROS",
-    "__STDC_FORMAT_MACROS",
-    "__STDC_LIMIT_MACROS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/geometry/**"
-defines = [
-    "NDEBUG",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_USE_MATH_DEFINES",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-    "__OPENCV_BUILD=1",
-    "__STDC_CONSTANT_MACROS",
-    "__STDC_FORMAT_MACROS",
-    "__STDC_LIMIT_MACROS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/highgui/**"
-defines = [
-    "ENABLE_PLUGINS",
-    "NDEBUG",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_USE_MATH_DEFINES",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-    "__OPENCV_BUILD=1",
-    "__STDC_CONSTANT_MACROS",
-    "__STDC_FORMAT_MACROS",
-    "__STDC_LIMIT_MACROS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/imgcodecs/**"
-defines = [
-    "HAVE_IMGCODEC_HDR",
-    "HAVE_IMGCODEC_PFM",
-    "HAVE_IMGCODEC_PXM",
-    "HAVE_IMGCODEC_SUNRASTER",
-    "HAVE_STDARG_H=1",
-    "NDEBUG",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_USE_MATH_DEFINES",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-    "__OPENCV_BUILD=1",
-    "__STDC_CONSTANT_MACROS",
-    "__STDC_FORMAT_MACROS",
-    "__STDC_LIMIT_MACROS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/imgproc/**"
-defines = [
-    "HAVE_STDARG_H=1",
-    "NDEBUG",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_USE_MATH_DEFINES",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-    "__OPENCV_BUILD=1",
-    "__STDC_CONSTANT_MACROS",
-    "__STDC_FORMAT_MACROS",
-    "__STDC_LIMIT_MACROS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/libjpeg-turbo/**"
-defines = [
-    "NDEBUG",
-    "NO_GETENV",
-    "NO_PUTENV",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/jpeg12/**"
-defines = [
-    "BITS_IN_JSAMPLE=12",
-    "NDEBUG",
-    "NO_GETENV",
-    "NO_PUTENV",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/jpeg16/**"
-defines = [
-    "BITS_IN_JSAMPLE=16",
-    "NDEBUG",
-    "NO_GETENV",
-    "NO_PUTENV",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/libpng/**"
-defines = [
-    "HAVE_STDARG_H=1",
-    "NDEBUG",
-    "PNG_INTEL_SSE_OPT=1",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/videoio/**"
-defines = [
-    "ENABLE_PLUGINS",
-    "HAVE_FFMPEG",
-    "NDEBUG",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_USE_MATH_DEFINES",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-    "__OPENCV_BUILD=1",
-    "__STDC_CONSTANT_MACROS",
-    "__STDC_FORMAT_MACROS",
-    "__STDC_LIMIT_MACROS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/zlib/**"
-defines = [
-    "HAVE_STDARG_H=1",
-    "NDEBUG",
-    "NO_FSEEKO",
-    "WIN32",
-    "_CRT_NONSTDC_NO_DEPRECATE",
-    "_CRT_SECURE_NO_DEPRECATE",
-    "_SCL_SECURE_NO_WARNINGS",
-    "_VARIADIC_MAX=10",
-    "_WIN32_WINNT=0x0601",
-    "_WINDOWS",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/core/**/*.avx.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/core/**/*.avx2.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-    "-mf16c",
-    "-mavx2",
-    "-mfma",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX2=1",
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_FMA3=1",
-    "CV_CPU_COMPILE_FP16=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX2",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/core/**/*.avx512_skx.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-    "-mf16c",
-    "-mavx2",
-    "-mfma",
-    "-mavx512f",
-    "-mavx512f",
-    "-mavx512cd",
-    "-mavx512f",
-    "-mavx512cd",
-    "-mavx512vl",
-    "-mavx512bw",
-    "-mavx512dq",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX2=1",
-    "CV_CPU_COMPILE_AVX512_COMMON=1",
-    "CV_CPU_COMPILE_AVX512_SKX=1",
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_AVX_512F=1",
-    "CV_CPU_COMPILE_FMA3=1",
-    "CV_CPU_COMPILE_FP16=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/core/**/*.sse4_1.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-]
-defines = [
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=SSE4_1",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/core/**/*.sse4_2.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-]
-defines = [
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=SSE4_2",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/imgproc/**/*.avx.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/imgproc/**/*.avx2.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-    "-mf16c",
-    "-mavx2",
-    "-mfma",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX2=1",
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_FMA3=1",
-    "CV_CPU_COMPILE_FP16=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX2",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/imgproc/**/*.avx512_skx.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-    "-mpopcnt",
-    "-msse4.2",
-    "-mavx",
-    "-mf16c",
-    "-mavx2",
-    "-mfma",
-    "-mavx512f",
-    "-mavx512f",
-    "-mavx512cd",
-    "-mavx512f",
-    "-mavx512cd",
-    "-mavx512vl",
-    "-mavx512bw",
-    "-mavx512dq",
-]
-defines = [
-    "CV_CPU_COMPILE_AVX2=1",
-    "CV_CPU_COMPILE_AVX512_COMMON=1",
-    "CV_CPU_COMPILE_AVX512_SKX=1",
-    "CV_CPU_COMPILE_AVX=1",
-    "CV_CPU_COMPILE_AVX_512F=1",
-    "CV_CPU_COMPILE_FMA3=1",
-    "CV_CPU_COMPILE_FP16=1",
-    "CV_CPU_COMPILE_POPCNT=1",
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSE4_2=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/imgproc/**/*.sse4_1.cpp"
-cxxflags = [
-    "-mssse3",
-    "-msse4.1",
-]
-defines = [
-    "CV_CPU_COMPILE_SSE4_1=1",
-    "CV_CPU_COMPILE_SSSE3=1",
-    "CV_CPU_DISPATCH_MODE=SSE4_1",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/core/third_party_opencv-5.0.0_modules_core_src_alloc.cpp"
-defines = [
-    "HAVE_MALLOC_H=1",
-    "HAVE_WIN32_ALIGNED_MALLOC=1",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/core/third_party_opencv-5.0.0_modules_core_src_parallel_parallel.cpp"
-defines = [
-    "DEBUG_POSTFIX=d",
-    "PARALLEL_ENABLE_PLUGINS=1",
-]
-
-[[build.flags]]
-glob = "gen/windows/tu/w/videoio/third_party_opencv-5.0.0_modules_videoio_src_backend_plugin.cpp"
-defines = [
-    "DEBUG_POSTFIX=d",
 ]
 
 [target.'cfg(linux)'.build]
@@ -988,13 +355,226 @@ sources  = [
         "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdsample.c",
         "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jutils.c",
     ]
+# x86_64 dispatch TUs + nasm .asm — linux is the only x86_64 leg; the macosx
+# snapshot is arm64 (neon TUs below) and windows keys these on stub paths.
+
+[[target.'cfg(linux)'.build.flags]]
+glob = "third_party/opencv-5.0.0/**/*.asm"
+defines = [
+    "ELF",
+    "NO_GETENV",
+    "NO_PUTENV",
+    "PIC",
+    "__CET__",
+    "__x86_64__",
+]
+
+[[target.'cfg(linux)'.build.flags]]
+glob = "**/modules/core/**/*.avx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX",
+]
+
+[[target.'cfg(linux)'.build.flags]]
+glob = "**/modules/core/**/*.avx2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX2",
+]
+
+[[target.'cfg(linux)'.build.flags]]
+glob = "**/modules/core/**/*.avx512_skx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+    "-mavx512f",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512vl",
+    "-mavx512bw",
+    "-mavx512dq",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX512_COMMON=1",
+    "CV_CPU_COMPILE_AVX512_SKX=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_AVX_512F=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
+]
+
+[[target.'cfg(linux)'.build.flags]]
+glob = "**/modules/core/**/*.sse4_1.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+]
+defines = [
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_1",
+]
+
+[[target.'cfg(linux)'.build.flags]]
+glob = "**/modules/core/**/*.sse4_2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+]
+defines = [
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_2",
+]
+
+[[target.'cfg(linux)'.build.flags]]
+glob = "**/modules/imgproc/**/*.avx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX",
+]
+
+[[target.'cfg(linux)'.build.flags]]
+glob = "**/modules/imgproc/**/*.avx2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX2",
+]
+
+[[target.'cfg(linux)'.build.flags]]
+glob = "**/modules/imgproc/**/*.avx512_skx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+    "-mavx512f",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512vl",
+    "-mavx512bw",
+    "-mavx512dq",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX512_COMMON=1",
+    "CV_CPU_COMPILE_AVX512_SKX=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_AVX_512F=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
+]
+
+[[target.'cfg(linux)'.build.flags]]
+glob = "**/modules/imgproc/**/*.sse4_1.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+]
+defines = [
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_1",
+]
+
 # SSE3 baseline for the library TUs only (see the cflags note above): the
 # vendored OpenCV/3rdparty sources and the gen/ per-module + libjpeg TUs, never
 # the src/*.cppm module interfaces — so opencv.*.pcm stays baseline-loadable.
-flags = [
-    { glob = "third_party/opencv-5.0.0/**", cflags = ["-msse3"], cxxflags = ["-msse3"] },
-    { glob = "gen/**",                      cflags = ["-msse3"], cxxflags = ["-msse3"] },
-]
+[[target.'cfg(linux)'.build.flags]]
+glob = "third_party/opencv-5.0.0/**"
+cflags = ["-msse3"]
+cxxflags = ["-msse3"]
+
+[[target.'cfg(linux)'.build.flags]]
+glob = "gen/**"
+cflags = ["-msse3"]
+cxxflags = ["-msse3"]
 
 [target.'cfg(macos)'.build]
 cflags   = [
@@ -1084,6 +664,18 @@ sources  = [
         "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jutils.c",
     ]
 
+[[target.'cfg(macos)'.build.flags]]
+glob = "gen/common/modules/core/transpose.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
+[[target.'cfg(macos)'.build.flags]]
+glob = "gen/common/modules/imgproc/warp_kernels.neon.cpp"
+defines = [
+    "CV_CPU_DISPATCH_MODE=NEON",
+]
+
 [target.'cfg(windows)'.build]
 cflags   = [
     "-w",
@@ -1097,6 +689,435 @@ ldflags  = [
 sources  = [
         "gen/windows/tu/w/**/*.{c,cc,cpp,asm}",
     ]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/core/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "NDEBUG",
+    "OPENCV_ALLOCATOR_STATS_COUNTER_TYPE=long long",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/flann/**"
+defines = [
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/geometry/**"
+defines = [
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/highgui/**"
+defines = [
+    "ENABLE_PLUGINS",
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/imgcodecs/**"
+defines = [
+    "HAVE_IMGCODEC_HDR",
+    "HAVE_IMGCODEC_PFM",
+    "HAVE_IMGCODEC_PXM",
+    "HAVE_IMGCODEC_SUNRASTER",
+    "HAVE_STDARG_H=1",
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/imgproc/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/libjpeg-turbo/**"
+defines = [
+    "NDEBUG",
+    "NO_GETENV",
+    "NO_PUTENV",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/jpeg12/**"
+defines = [
+    "BITS_IN_JSAMPLE=12",
+    "NDEBUG",
+    "NO_GETENV",
+    "NO_PUTENV",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/jpeg16/**"
+defines = [
+    "BITS_IN_JSAMPLE=16",
+    "NDEBUG",
+    "NO_GETENV",
+    "NO_PUTENV",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/libpng/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "NDEBUG",
+    "PNG_INTEL_SSE_OPT=1",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/videoio/**"
+defines = [
+    "ENABLE_PLUGINS",
+    "HAVE_FFMPEG",
+    "NDEBUG",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_USE_MATH_DEFINES",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+    "__OPENCV_BUILD=1",
+    "__STDC_CONSTANT_MACROS",
+    "__STDC_FORMAT_MACROS",
+    "__STDC_LIMIT_MACROS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/zlib/**"
+defines = [
+    "HAVE_STDARG_H=1",
+    "NDEBUG",
+    "NO_FSEEKO",
+    "WIN32",
+    "_CRT_NONSTDC_NO_DEPRECATE",
+    "_CRT_SECURE_NO_DEPRECATE",
+    "_SCL_SECURE_NO_WARNINGS",
+    "_VARIADIC_MAX=10",
+    "_WIN32_WINNT=0x0601",
+    "_WINDOWS",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/core/**/*.avx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/core/**/*.avx2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX2",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/core/**/*.avx512_skx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+    "-mavx512f",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512vl",
+    "-mavx512bw",
+    "-mavx512dq",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX512_COMMON=1",
+    "CV_CPU_COMPILE_AVX512_SKX=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_AVX_512F=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/core/**/*.sse4_1.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+]
+defines = [
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_1",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/core/**/*.sse4_2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+]
+defines = [
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_2",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/imgproc/**/*.avx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/imgproc/**/*.avx2.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX2",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/imgproc/**/*.avx512_skx.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+    "-mpopcnt",
+    "-msse4.2",
+    "-mavx",
+    "-mf16c",
+    "-mavx2",
+    "-mfma",
+    "-mavx512f",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512f",
+    "-mavx512cd",
+    "-mavx512vl",
+    "-mavx512bw",
+    "-mavx512dq",
+]
+defines = [
+    "CV_CPU_COMPILE_AVX2=1",
+    "CV_CPU_COMPILE_AVX512_COMMON=1",
+    "CV_CPU_COMPILE_AVX512_SKX=1",
+    "CV_CPU_COMPILE_AVX=1",
+    "CV_CPU_COMPILE_AVX_512F=1",
+    "CV_CPU_COMPILE_FMA3=1",
+    "CV_CPU_COMPILE_FP16=1",
+    "CV_CPU_COMPILE_POPCNT=1",
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSE4_2=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=AVX512_SKX",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/imgproc/**/*.sse4_1.cpp"
+cxxflags = [
+    "-mssse3",
+    "-msse4.1",
+]
+defines = [
+    "CV_CPU_COMPILE_SSE4_1=1",
+    "CV_CPU_COMPILE_SSSE3=1",
+    "CV_CPU_DISPATCH_MODE=SSE4_1",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/core/third_party_opencv-5.0.0_modules_core_src_alloc.cpp"
+defines = [
+    "HAVE_MALLOC_H=1",
+    "HAVE_WIN32_ALIGNED_MALLOC=1",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/core/third_party_opencv-5.0.0_modules_core_src_parallel_parallel.cpp"
+defines = [
+    "DEBUG_POSTFIX=d",
+    "PARALLEL_ENABLE_PLUGINS=1",
+]
+
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/w/videoio/third_party_opencv-5.0.0_modules_videoio_src_backend_plugin.cpp"
+defines = [
+    "DEBUG_POSTFIX=d",
+]
+
 # -msse3 is OpenCV's x86_64 baseline and the library TUs need it, but it must
 # NOT reach the module-interface units (src/*.cppm). A BMI compiled with a
 # non-default target feature cannot be loaded by an importer that lacks it
@@ -1106,9 +1127,10 @@ sources  = [
 # -msse3 to the library TUs only (gen/windows/tu/** covers the w/ and dnn wdnn/
 # stub namespaces) keeps opencv.*.pcm at baseline — loadable by any importer —
 # while the .cpp still get SSE3 codegen.
-flags = [
-    { glob = "gen/windows/tu/**", cflags = ["-msse3"], cxxflags = ["-msse3"] },
-]
+[[target.'cfg(windows)'.build.flags]]
+glob = "gen/windows/tu/**"
+cflags = ["-msse3"]
+cxxflags = ["-msse3"]
 
 
 [dependencies]

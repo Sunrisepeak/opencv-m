@@ -31,10 +31,10 @@ jobs:
   #   linux-musl  — needed mcpp-index#110 (compat.ffmpeg
   #                 -Wno-error=incompatible-pointer-types for musl's ioctl
   #                 signature); merged as e83ed49, green since.
-  #   windows     — builds through the gen/windows/tu/w*/ stub-namespace
-  #                 workaround for mcpp-community/mcpp#258 (windows per-glob
-  #                 flags keyed on windows-only stub paths). Delete the stub
-  #                 layer when per-OS flag tables land upstream.
+  #   windows     — per-glob flags live in [target.'cfg(windows)'.build.flags]
+  #                 (mcpp#258, landed in 0.0.102), still keyed on the
+  #                 gen/windows/tu/w*/ stub paths; removing the stub layer
+  #                 itself is tracked in #17.
   test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}

@@ -7,28 +7,39 @@ on:
 permissions:
   contents: write
 
+env:
+  # Keep in lockstep with ci.yml: the manifest needs 0.0.102
+  # ([target.'cfg(...)'.build.flags], mcpp#258). The previous `xlings install`
+  # path delivered whatever mcpp xlings shipped (0.0.101 at the time), which
+  # rejects cfg-section flag tables — the v0.0.9 and v0.0.10 release runs both
+  # failed on exactly that skew, while the 5-leg CI (pinned) was green.
+  MCPP_VERSION: "0.0.102"
+
 jobs:
   verify-and-release:
     name: verify (linux) + GitHub Release
     runs-on: ubuntu-latest
-    # Cold source-build of compat.opencv + transitive compat.ffmpeg (see ci.yml).
+    # Cold source-build of the vendored OpenCV + transitive compat.ffmpeg (see ci.yml).
     timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # No apt nasm: mcpp bootstraps nasm via xlings (mcpp#232, floor 0.0.98).
-      - name: Install Xlings
+      # Same pinned install as ci.yml: the release tarball seeds
+      # ~/.mcpp/registry (nasm included), no xlings needed.
+      - name: Download mcpp
+        shell: bash
         env:
-          XLINGS_NON_INTERACTIVE: 1
+          MCPP_ARCHIVE: mcpp-${{ env.MCPP_VERSION }}-linux-x86_64.tar.gz
+          MCPP_ROOT: mcpp-${{ env.MCPP_VERSION }}-linux-x86_64
         run: |
-          curl -fsSL https://raw.githubusercontent.com/openxlings/xlings/refs/heads/main/tools/other/quick_install.sh | bash
-          echo "$HOME/.xlings/subos/current/bin" >> "$GITHUB_PATH"
-
-      - name: Install project tools
-        run: |
-          xlings update
-          xlings install
+          curl -L -fsS -o "$MCPP_ARCHIVE" \
+            "https://github.com/mcpp-community/mcpp/releases/download/v${MCPP_VERSION}/${MCPP_ARCHIVE}"
+          tar -xzf "$MCPP_ARCHIVE"
+          root="$PWD/$MCPP_ROOT"
+          mkdir -p "$HOME/.mcpp/registry"
+          cp -a "$root/registry/." "$HOME/.mcpp/registry/"
+          echo "$root/bin" >> "$GITHUB_PATH"
 
       - name: Set default toolchain
         run: |

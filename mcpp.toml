@@ -988,6 +988,13 @@ sources  = [
         "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdsample.c",
         "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jutils.c",
     ]
+# SSE3 baseline for the library TUs only (see the cflags note above): the
+# vendored OpenCV/3rdparty sources and the gen/ per-module + libjpeg TUs, never
+# the src/*.cppm module interfaces — so opencv.*.pcm stays baseline-loadable.
+flags = [
+    { glob = "third_party/opencv-5.0.0/**", cflags = ["-msse3"], cxxflags = ["-msse3"] },
+    { glob = "gen/**",                      cflags = ["-msse3"], cxxflags = ["-msse3"] },
+]
 
 [target.'cfg(macos)'.build]
 cflags   = [
@@ -1076,13 +1083,6 @@ sources  = [
         "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdsample.c",
         "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jutils.c",
     ]
-# SSE3 baseline for the library TUs only (see the cflags note above): the
-# vendored OpenCV/3rdparty sources and the gen/ per-module + libjpeg TUs, never
-# the src/*.cppm module interfaces — so opencv.*.pcm stays baseline-loadable.
-flags = [
-    { glob = "third_party/opencv-5.0.0/**", cflags = ["-msse3"], cxxflags = ["-msse3"] },
-    { glob = "gen/**",                      cflags = ["-msse3"], cxxflags = ["-msse3"] },
-]
 
 [target.'cfg(windows)'.build]
 cflags   = [

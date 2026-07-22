@@ -15,7 +15,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  MCPP_VERSION: "0.0.101"
+  # 0.0.102 (mcpp#258): OS-conditional [target.'cfg(os)'.build].flags, which
+  # this manifest uses to keep -msse3 on the library TUs but off the module
+  # interfaces. 0.0.101 rejects `flags` under a cfg section. (0.0.102 also
+  # carries #261 — the windows scan-deps command-line fix.)
+  MCPP_VERSION: "0.0.102"
 
 jobs:
   # ── Platform × toolchain matrix ─────────────────────────────────────────

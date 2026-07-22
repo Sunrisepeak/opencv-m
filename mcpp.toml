@@ -868,8 +868,14 @@ defines = [
 ]
 
 [target.'cfg(linux)'.build]
+# -msse3 is intentionally NOT here: it is OpenCV's x86_64 baseline and the
+# library TUs need it, but as a non-default target feature it would tag every
+# module-interface BMI (src/*.cppm) and make opencv.*.pcm unloadable by a
+# baseline consumer TU (clang -Wmodule-file-config-mismatch). It is applied to
+# the library TUs only via the per-glob `flags` below, keeping the BMIs at
+# baseline. (linux CI uses gcc, which does not enforce this, but a linux/clang
+# consumer would hit it exactly as windows/clang did.)
 cflags   = [
-    "-msse3",
     "-w",
     "-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=long long",
     "-DPNG_INTEL_SSE_OPT=1",
@@ -879,7 +885,6 @@ cflags   = [
     "-DHAVE_FLATBUFFERS=1",
 ]
 cxxflags = [
-    "-msse3",
     "-w",
     "-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=long long",
     "-DPNG_INTEL_SSE_OPT=1",
@@ -983,6 +988,13 @@ sources  = [
         "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jdsample.c",
         "gen/common/tu/jpeg16/jpeg16_3rdparty_libjpeg-turbo_src_jutils.c",
     ]
+# SSE3 baseline for the library TUs only (see the cflags note above): the
+# vendored OpenCV/3rdparty sources and the gen/ per-module + libjpeg TUs, never
+# the src/*.cppm module interfaces — so opencv.*.pcm stays baseline-loadable.
+flags = [
+    { glob = "third_party/opencv-5.0.0/**", cflags = ["-msse3"], cxxflags = ["-msse3"] },
+    { glob = "gen/**",                      cflags = ["-msse3"], cxxflags = ["-msse3"] },
+]
 
 [target.'cfg(macos)'.build]
 cflags   = [
@@ -1074,11 +1086,9 @@ sources  = [
 
 [target.'cfg(windows)'.build]
 cflags   = [
-    "-msse3",
     "-w",
 ]
 cxxflags = [
-    "-msse3",
     "-w",
 ]
 ldflags  = [
@@ -1087,6 +1097,18 @@ ldflags  = [
 sources  = [
         "gen/windows/tu/w/**/*.{c,cc,cpp,asm}",
     ]
+# -msse3 is OpenCV's x86_64 baseline and the library TUs need it, but it must
+# NOT reach the module-interface units (src/*.cppm). A BMI compiled with a
+# non-default target feature cannot be loaded by an importer that lacks it
+# (clang -Wmodule-file-config-mismatch), and a consumer compiles its importing
+# TU at plain baseline — so a +sse3 opencv.cv.pcm is unloadable downstream even
+# though the package's own tests (which also carry -msse3) accept it. Keying
+# -msse3 to the library TUs only (gen/windows/tu/** covers the w/ and dnn wdnn/
+# stub namespaces) keeps opencv.*.pcm at baseline — loadable by any importer —
+# while the .cpp still get SSE3 codegen.
+flags = [
+    { glob = "gen/windows/tu/**", cflags = ["-msse3"], cxxflags = ["-msse3"] },
+]
 
 
 [dependencies]
